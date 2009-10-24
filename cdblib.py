@@ -1,9 +1,8 @@
 #!/usr/bin/env python2.5
 
 '''
-Manipulate DJB's Constant Database files. These are 2 level disk-based hash
-tables that efficiently handle thousands of keys, while remaining
-space-efficient.
+Manipulate DJB's Constant Databases. These are 2 level disk-based hash tables
+that efficiently handle thousands of keys, while remaining space-efficient.
 
     http://cr.yp.to/cdb.html
 
@@ -12,7 +11,7 @@ consider using Python's hash() instead of cdb_hash() for a tidy 28% speedup,
 however readers must be similarly configured.
 '''
 
-import _struct
+from _struct import Struct
 from itertools import chain
 
 
@@ -24,8 +23,8 @@ def cdb_hash(s):
         h = (((h << 5) + h) ^ ord(c)) & 0xffffffff
     return h # for small strings, masking here is faster.
 
-read_2_le4 = _struct.Struct('<LL').unpack
-write_2_le4 = _struct.Struct('<LL').pack
+read_2_le4 = Struct('<LL').unpack
+write_2_le4 = Struct('<LL').pack
 
 
 class Reader(object):
@@ -98,16 +97,7 @@ class Writer(object):
 
         self._curslab = []
         self._slabs = [self._curslab]
-
-        self._index = [0, 0] * 256
-        self._write_index()
-
-    def _write_index(self):
-        index = self._index
-
-        self.fp.seek(0)
-        for i in range(0, 512, 2):
-            self.fp.write(write_2_le4(index[i], index[i+1]))
+        self._write_tbl([(0, 0)] * 256)
 
     def put(self, key, value):
         assert type(key) is str and type(value) is str
@@ -123,22 +113,54 @@ class Writer(object):
 
         self._curslab.append((self.hash(key), pos))
 
+    def puts(self, key, values):
+        for value in values:
+            self.put(key, value)
+
     def putint(self, key, value):
         self.put(key, str(value))
 
     def putints(self, key, values):
-        for value in values:
-            self.put(key, str(value))
+        self.puts(key, (str(value) for value in values))
 
-    def putstring(self, key, value):
+    def putstring(self, key, values):
         self.put(key, value.encode('utf-8'))
 
     def putstrings(self, key, values):
-        for value in values:
-            self.put(key, value.encode('utf-8'))
+        self.puts(key, (value.encode('utf-8') for value in values))
+
+    def _write_tbl(self, tbl):
+        for pair in tbl:
+            self.fp.write(write_2_le4(*pair))
 
     def finalize(self):
-        pass
+        unordered = [[] for i in range(256)]
+        for slab in self._slabs:
+            for pair in slab:
+                unordered[pair[0] & 0xff].append(pair)
 
+        index = []
+        for tbl in unordered:
+            length = len(tbl) << 1
+            ordered = [(0, 0)] * length
+            for pair in tbl:
+                where = (pair[0] >> 8) % length
+                for idx in chain(xrange(where, length), xrange(0, where)):
+                    if not ordered[idx][0]:
+                        ordered[idx] = pair
+                        break
 
-reader = Reader(file('dave.cdb'))
+            index.append((self.fp.tell(), length))
+            self._write_tbl(ordered)
+
+        self.fp.seek(0)
+        self._write_tbl(index)
+
+'''
+writer = Writer(file('dave.cdb', 'w'), hash=hash)
+for i in range(40):
+    writer.put('dave', 'dave')
+writer.finalize()
+
+reader = Reader(file('dave.cdb'), hash=hash)
+'''
