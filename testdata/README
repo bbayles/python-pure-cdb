@@ -1,0 +1,7 @@
+top250pw.cdbmake:
+    Keys are top 250 common passwords taken from [0], values are their rank (1..250).
+
+pwdump.cdbmake:
+    10,500 passwords by MD5'd e-mail address. Source: BitTorrent.
+
+[0] http://blog.jimmyr.com/Password_analysis_of_databases_that_were_hacked_28_2009.php
