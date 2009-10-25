@@ -3,6 +3,8 @@
 import hashlib
 import unittest
 
+from functools import partial
+
 import cdblib
 
 try:
@@ -114,6 +116,7 @@ class ReaderNativeInterfaceTestBase:
         writer = cdblib.Writer(fp, hash=self.HASH_FUNCTION)
         writer.puts('dave', (str(i) for i in xrange(10)))
         writer.put('dave_no_dups', '1')
+        writer.put('dave_hex', '0x1a')
         writer.putstrings('art', self.ARTS)
         writer.finalize()
 
@@ -123,6 +126,7 @@ class ReaderNativeInterfaceTestBase:
     def test_insertion_order(self):
         keys  = ['dave'] * 10
         keys.append('dave_no_dups')
+        keys.append('dave_hex')
         keys.extend('art' for art in self.ARTS)
         self.assertEqual(self.reader.keys(), keys)
 
@@ -147,6 +151,7 @@ class ReaderNativeInterfaceTestBase:
     def test_getint(self):
         self.assertEqual(self.reader.getint('dave'), 0)
         self.assertEqual(self.reader.getint('dave_no_dups'), 1)
+        self.assertEqual(self.reader.getint('dave_hex', 16), 26)
         self.assertRaises(ValueError, self.reader.getint, 'art')
 
         self.assertEqual(self.reader.get('junk', 1), 1)
@@ -186,9 +191,110 @@ class ReaderNativeInterfaceNativeHashTestCase(ReaderNativeInterfaceTestBase,
 class ReaderNativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
                                             unittest.TestCase):
     # Ensure collisions don't result in the wrong keys being returned.
-    @staticmethod
-    def HASH_FUNCTION(s):
-        return 1
+    HASH_FUNCTION = staticmethod(lambda s: 1)
+
+
+class WriterNativeInterfaceTestBase:
+    def setUp(self):
+        self.fp = StringIO()
+        self.writer = cdblib.Writer(self.fp, hash=self.HASH_FUNCTION)
+
+    def get_reader(self):
+        self.writer.finalize()
+        self.fp.seek(0)
+        return cdblib.Reader(self.fp, hash=self.HASH_FUNCTION)
+
+    def make_bad(self, method):
+        return partial(self.assertRaises, Exception, method)
+
+    def test_put(self):
+        self.writer.put('dave', 'dave')
+        self.assertEqual(self.get_reader().get('dave'), 'dave')
+
+        # Don't care about rich error, just as long as it crashes.
+        bad = self.make_bad(self.writer.put)
+        bad('dave', u'dave')
+        bad(u'dave', 'dave')
+        bad('dave', 123)
+        bad(123, 'dave')
+
+    def test_puts(self):
+        lst = 'dave dave dave'.split()
+
+        self.writer.puts('dave', lst)
+        self.assertEqual(list(self.get_reader().gets('dave')), lst)
+
+        bad = self.make_bad(self.writer.puts)
+        bad('dave', map(unicode, lst))
+        bad(u'dave', lst)
+        bad('dave', (123,))
+        bad(123, lst)
+
+    def test_putkey(self):
+        self.writer.putkey('dave')
+        reader = self.get_reader()
+        self.assert_('dave' in reader)
+        self.assertEqual(reader['dave'], '')
+
+        bad = self.make_bad(self.writer.putkey)
+        bad(123)
+        bad(u'dave')
+        bad(True)
+
+    def test_putint(self):
+        self.writer.putint('dave', 26)
+        self.writer.putint('dave2', 26<<32)
+        self.assertEqual(self.get_reader().getint('dave'), 26)
+        self.assertEqual(self.get_reader().getint('dave2'), 26<<32)
+
+        bad = self.make_bad(self.writer.putint)
+        bad(True)
+        bad('dave')
+        bad(None)
+
+    def test_putints(self):
+        self.writer.putints('dave', range(10))
+        self.assertEqual(list(self.get_reader().getints('dave')), range(10))
+
+        bad = self.make_bad(self.writer.putints)
+        bad((True, False))
+        bad('dave')
+        bad(u'dave')
+
+    def test_putstring(self):
+        self.writer.putstring('dave', u'dave')
+        self.assertEqual(self.get_reader().getstring('dave'), u'dave')
+
+        bad = self.make_bad(self.writer.putstring)
+        bad('dave')
+        bad(123)
+        bad(None)
+
+    def test_putstrings(self):
+        lst = [u'zark', u'quark']
+        self.writer.putstrings('dave', lst)
+        self.assertEqual(list(self.get_reader().getstrings('dave')), lst)
+
+        bad = self.make_bad(self.writer.putstrings)
+        bad('dave', range(10))
+        # Why do str objects have encode? Stupid. Can't test for this at
+        # runtime without calling list() and an extra for loop.
+        # bad('dave', map(str, lst))
+
+
+class WriterNativeInterfaceDjbHashTestCase(WriterNativeInterfaceTestBase,
+                                           unittest.TestCase):
+    HASH_FUNCTION = staticmethod(cdblib.djb_hash)
+
+
+class WriterNativeInterfaceNativeHashTestCase(WriterNativeInterfaceTestBase,
+                                              unittest.TestCase):
+    HASH_FUNCTION = staticmethod(hash)
+
+
+class WriterNativeInterfaceNullHashTestCase(WriterNativeInterfaceTestBase,
+                                            unittest.TestCase):
+    HASH_FUNCTION = staticmethod(lambda s: 1)
 
 
 class WriterKnownGoodTestBase:
@@ -250,9 +356,7 @@ class WriterKnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
 
 class WriterKnownGoodNullHashTestCase(WriterKnownGoodTestBase,
                                       unittest.TestCase):
-    @staticmethod
-    def HASH_FUNCTION(s):
-        return 1
+    HASH_FUNCTION = staticmethod(lambda s: 1)
 
     EMPTY_MD5 = 'a646d6b87720195feb973de130b10123'
     SINGLE_REC_MD5 = 'f8cc0cdd90fe45193f7d53980c354d5f'
