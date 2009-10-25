@@ -27,13 +27,12 @@ def djb_hash(s):
 read_2_le4 = Struct('<LL').unpack
 write_2_le4 = Struct('<LL').pack
 
-def might_mask(fn):
+def might_mask(fn, _magic=841352530):
     '''If the given function is Python's hash() function, and we aren't on a
     32-bit architecture, return the function wrapped in a function that masks
     its result to 32-bits, otherwise return the original function.'''
-    if fn is hash and hash('dave') != 841352530:
-        fn = lambda s, m=0xffffffff: fn(s) & m
-        assert fn('dave') == 841352530
+    if fn is hash and hash('dave') != _magic:
+        return lambda s, m=0xffffffff: fn(s) & m
     return fn
 
 
@@ -77,7 +76,7 @@ class Reader(object):
 
         pos = 2048
         while pos < table_start:
-            klen, dlen = read_2_le4(self.data[pos:pos+8]
+            klen, dlen = read_2_le4(self.data[pos:pos+8])
             pos += 8
 
             key = self.data[pos:pos+klen]
@@ -199,8 +198,7 @@ class Writer(object):
         self.fp = fp
         self.hash = might_mask(hash)
 
-        self._slab = []
-        self._slabs = [self._slab]
+        self._unordered = [[] for i in range(256)]
         self._write_tbl([(0, 0)] * 256)
 
     def put(self, key, value):
@@ -212,10 +210,8 @@ class Writer(object):
         self.fp.write(key)
         self.fp.write(value)
 
-        if len(self._slab) == 1000:
-            self._slab = []
-            self._slabs.append(self._slab)
-        self._slab.append((self.hash(key), pos))
+        h = self.hash(key)
+        self._unordered[h & 0xff].append((h, pos))
 
     def puts(self, key, values):
         '''Write more than one value for the same key to the output file.
@@ -252,13 +248,9 @@ class Writer(object):
     def finalize(self):
         '''Write the final hash tables to the output file, and write out its
         index. The output file remains open upon return.'''
-        unordered = [[] for i in range(256)]
-        for slab in self._slabs:
-            for pair in slab:
-                unordered[pair[0] & 0xff].append(pair)
 
         index = []
-        for tbl in unordered:
+        for tbl in self._unordered:
             length = len(tbl) << 1
             ordered = [(0, 0)] * length
             for pair in tbl:
