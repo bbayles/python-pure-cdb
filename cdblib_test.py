@@ -186,5 +186,14 @@ class ReaderNativeInterfaceNativeHashTestCase(ReaderNativeInterfaceTestBase,
     HASH_FUNCTION = staticmethod(hash)
 
 
+class ReaderNativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
+                                            unittest.TestCase):
+    # This test ensures that collisions don't result in the wrong keys being
+    # returned.
+    @staticmethod
+    def HASH_FUNCTION(s):
+        return 1
+
+
 if __name__ == '__main__':
     unittest.main()
