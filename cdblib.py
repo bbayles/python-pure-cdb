@@ -47,11 +47,11 @@ class Reader(object):
         file-like object into memory, optionally specifying a non-default hash
         function (e.g. __builtin__.hash).'''
         self.data = fp.read()
-        self.table_start = None
-        self.length = None
         if len(self.data) < 2048:
             raise IOError('CDB too small')
 
+        self.table_start = None
+        self.length = None
         self.hash = might_mask(hash)
 
     def _get_value(self, pos, key):
@@ -194,8 +194,8 @@ class Writer(object):
         self.fp = fp
         self.hash = might_mask(hash)
 
+        fp.write('\x00' * 2048)
         self._unordered = [[] for i in range(256)]
-        self._write_tbl([(0, 0)] * 256)
 
     def put(self, key, value):
         '''Write a string key/value pair to the output file.'''
@@ -239,12 +239,6 @@ class Writer(object):
         calling putstring() in a loop.'''
         self.puts(key, (value.encode(encoding) for value in values))
 
-    def _write_tbl(self, tbl):
-        '''Write a sequence of 2-tuples containing integers to the output file
-        at the current offset.'''
-        for pair in tbl:
-            self.fp.write(write_2_le4(*pair))
-
     def finalize(self):
         '''Write the final hash tables to the output file, and write out its
         index. The output file remains open upon return.'''
@@ -260,7 +254,9 @@ class Writer(object):
                         break
 
             index.append((self.fp.tell(), length))
-            self._write_tbl(ordered)
+            for pair in tbl:
+                self.fp.write(write_2_le4(*pair))
 
         self.fp.seek(0)
-        self._write_tbl(index)
+        for pair in tbl:
+            self.fp.write(write_2_le4(*pair))
