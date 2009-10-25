@@ -33,7 +33,7 @@ class ReaderKnownGoodTestCase(unittest.TestCase):
     def test_read_pwdump(self):
         # MD5s here are of the source .cdbmake file.
         self.assertEqual(self.reader_to_cdbmake_md5('testdata/pwdump.cdb'),
-                         'e4ba0fa6c6283875b757d36db36f3f5c')
+                         '84d38c5b6b5bb01bb374b2f7af0129b1')
         self.assertEqual(self.reader_to_cdbmake_md5('testdata/top250pws.cdb'),
                          '0564adfe4667506a326ba2f363415616')
 
@@ -191,7 +191,7 @@ class ReaderNativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
         return 1
 
 
-class WriterTestBase:
+class WriterKnownGoodTestBase:
     def setUp(self):
         self.fp = StringIO()
         self.writer = cdblib.Writer(self.fp, hash=self.HASH_FUNCTION)
@@ -200,36 +200,65 @@ class WriterTestBase:
         self.writer.finalize()
         return hashlib.md5(self.fp.getvalue()).hexdigest()
 
-    def test_known_good(self):
+    def test_empty(self):
+        self.assertEqual(self.get_md5(), self.EMPTY_MD5)
+
+    def test_single_rec(self):
         self.writer.put('dave', 'dave')
-        self.assertEqual(self.get_md5(), self.DAVE_DAVE_MD5)
+        self.assertEqual(self.get_md5(), self.SINGLE_REC_MD5)
 
-    def test_known_good_multikey(self):
+    def test_dup_keys(self):
         self.writer.puts('dave', ('dave', 'dave'))
-        self.assertEqual(self.get_md5(), self.DAVE_DAVE_DAVE_MD5)
+        self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
+
+    def get_iteritems(self, filename):
+        reader = cdblib.Reader(file(filename), hash=self.HASH_FUNCTION)
+        return reader.iteritems()
+
+    def test_known_good_top250(self):
+        for key, value in self.get_iteritems('testdata/top250pws.cdb'):
+            self.writer.put(key, value)
+        self.assertEqual(self.get_md5(), self.TOP250PWS_MD5)
+
+    def test_known_good_pwdump(self):
+        for key, value in self.get_iteritems('testdata/pwdump.cdb'):
+            self.writer.put(key, value)
+        self.assertEqual(self.get_md5(), self.PWDUMP_MD5)
 
 
-class WriterDjbHashTestCase(WriterTestBase):#, unittest.TestCase):
+class WriterKnownGoodDjbHashTestCase(WriterKnownGoodTestBase,
+                                     unittest.TestCase):
     HASH_FUNCTION = staticmethod(cdblib.djb_hash)
-    DAVE_DAVE_MD5 = 'd94cdc896807d5b7ab5be0078d1469dc'
-    DAVE_DAVE_DAVE_MD5 = 'cb67e9e167cefcaddf62f03baa7f6c72'
 
-class WriterNativeHashTestCase(WriterTestBase):#, unittest.TestCase):
+    EMPTY_MD5 = 'a646d6b87720195feb973de130b10123'
+    SINGLE_REC_MD5 = 'd94cdc896807d5b7ab5be0078d1469dc'
+    DUP_KEYS_MD5 = 'cb67e9e167cefcaddf62f03baa7f6c72'
+    TOP250PWS_MD5 = 'ebcba66c01a4ed61a777bd16cf07e1b1'
+    PWDUMP_MD5 = '15993a395e1245af2a476601c219b3e5'
+
+
+class WriterKnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
+                                        unittest.TestCase):
     HASH_FUNCTION = staticmethod(hash)
-    DAVE_DAVE_MD5 = ''
-    DAVE_DAVE_DAVE_MD5 = ''
 
-class WriterNullHashTestCase(WriterTestBase):#, unittest.TestCase):
+    EMPTY_MD5 = 'a646d6b87720195feb973de130b10123'
+    SINGLE_REC_MD5 = '9121969c106905e3fd72162c7bbb96a8'
+    DUP_KEYS_MD5 = '331840e761aee9092af6f8b0370b7d9a'
+    TOP250PWS_MD5 = 'e641b7b7d109b2daaa08335a1dc457c6'
+    PWDUMP_MD5 = 'd5726fc195460c9eef3117111975532f'
+
+
+class WriterKnownGoodNullHashTestCase(WriterKnownGoodTestBase,
+                                      unittest.TestCase):
     @staticmethod
     def HASH_FUNCTION(s):
         return 1
 
-    DAVE_DAVE_MD5 = 'f8cc0cdd90fe45193f7d53980c354d5f'
-    DAVE_DAVE_DAVE_MD5 = 'd0b29c95509ce78594f9a69ff0818073'
-
-
-class WriterKnownGoodTestCase(unittest.TestCase):
-    pass
+    EMPTY_MD5 = 'a646d6b87720195feb973de130b10123'
+    SINGLE_REC_MD5 = 'f8cc0cdd90fe45193f7d53980c354d5f'
+    DUP_KEYS_MD5 = '3d5ad135593c942cf9621d3d4a1f6637'
+    TOP250PWS_MD5 = '0a5fff8836a175460ead340afff2d301'
+    PWDUMP_MD5 = 'eac33af35208c7daba0487d0d411b8d5'
 
 
 if __name__ == '__main__':
