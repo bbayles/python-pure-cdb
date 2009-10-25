@@ -116,19 +116,24 @@ class ReaderDictLikeTestCase(unittest.TestCase):
 
 
 class ReaderNativeInterfaceTestBase:
+    ARTS = (u'\N{SNOWMAN}', u'\N{CLOUD}', u'\N{UMBRELLA}')
+
     def setUp(self):
         fp = StringIO()
         writer = cdblib.Writer(fp, hash=self.HASH_FUNCTION)
-        for i in range(10):
-            writer.put('dave', str(i))
-
-        self.arts = (u'\N{SNOWMAN}', u'\N{CLOUD}', u'\N{UMBRELLA}')
+        writer.puts('dave', (str(i) for i in xrange(10)))
         writer.put('dave_no_dups', '1')
-        writer.putstrings('art', self.arts)
+        writer.putstrings('art', self.ARTS)
         writer.finalize()
 
         fp.seek(0)
         self.reader = cdblib.Reader(fp, hash=self.HASH_FUNCTION)
+
+    def test_insertion_order(self):
+        keys  = ['dave'] * 10
+        keys.append('dave_no_dups')
+        keys.extend('art' for art in self.ARTS)
+        self.assertEqual(self.reader.keys(), keys)
 
     def test_get(self):
         # First get on a key should return its first inserted value.
@@ -145,7 +150,7 @@ class ReaderNativeInterfaceTestBase:
         self.assertEqual(list(self.reader.gets('dave_no_dups')),
                          ['1'])
         self.assertEqual(list(self.reader.gets('art')),
-                         [ s.encode('utf-8') for s in self.arts ])
+                         [ s.encode('utf-8') for s in self.ARTS ])
         self.assertEqual(list(self.reader.gets('junk')), [])
 
     def test_getint(self):
@@ -165,12 +170,13 @@ class ReaderNativeInterfaceTestBase:
     def test_getstring(self):
         self.assertEqual(self.reader.getstring('art'), u'\N{SNOWMAN}')
         self.assertEqual(type(self.reader.getstring('art')), unicode)
+        self.assertRaises(ValueError, self.reader.getstring, 'junk')
 
         self.assertEqual(self.reader.getstring('junk', u'\N{COMET}'),
                          u'\N{COMET}')
 
     def test_getstrings(self):
-        self.assertEqual(tuple(self.reader.getstrings('art')), self.arts)
+        self.assertEqual(tuple(self.reader.getstrings('art')), self.ARTS)
         self.assert_(all(type(s) is unicode
                      for s in self.reader.getstrings('art')))
         self.assertEqual(list(self.reader.getstrings('junk')), [])
@@ -188,11 +194,51 @@ class ReaderNativeInterfaceNativeHashTestCase(ReaderNativeInterfaceTestBase,
 
 class ReaderNativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
                                             unittest.TestCase):
-    # This test ensures that collisions don't result in the wrong keys being
-    # returned.
+    # Ensure collisions don't result in the wrong keys being returned.
     @staticmethod
     def HASH_FUNCTION(s):
         return 1
+
+
+class WriterTestBase:
+    def setUp(self):
+        self.fp = StringIO()
+        self.writer = cdblib.Writer(self.fp, hash=self.HASH_FUNCTION)
+
+    def get_md5(self):
+        self.writer.finalize()
+        return hashlib.md5(self.fp.getvalue()).hexdigest()
+
+    def test_known_good(self):
+        self.writer.put('dave', 'dave')
+        self.assertEqual(self.get_md5(), self.DAVE_DAVE_MD5)
+
+    def test_known_good_multikey(self):
+        self.writer.puts('dave', ('dave', 'dave'))
+        self.assertEqual(self.get_md5(), self.DAVE_DAVE_DAVE_MD5)
+
+
+class WriterDjbHashTestCase(WriterTestBase, unittest.TestCase):
+    HASH_FUNCTION = staticmethod(cdblib.djb_hash)
+    DAVE_DAVE_MD5 = 'd94cdc896807d5b7ab5be0078d1469dc'
+    DAVE_DAVE_DAVE_MD5 = 'cb67e9e167cefcaddf62f03baa7f6c72'
+
+class WriterNativeHashTestCase(WriterTestBase, unittest.TestCase):
+    HASH_FUNCTION = staticmethod(hash)
+    DAVE_DAVE_MD5 = ''
+    DAVE_DAVE_DAVE_MD5 = ''
+
+class WriterNullHashTestCase(WriterTestBase, unittest.TestCase):
+    @staticmethod
+    def HASH_FUNCTION(s):
+        return 1
+
+    DAVE_DAVE_MD5 = 'f8cc0cdd90fe45193f7d53980c354d5f'
+    DAVE_DAVE_DAVE_MD5 = 'd0b29c95509ce78594f9a69ff0818073'
+
+
+class WriterKnownGoodTestCase(unittest.TestCase):
+    pass
 
 
 if __name__ == '__main__':
