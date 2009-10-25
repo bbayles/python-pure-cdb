@@ -5,6 +5,11 @@ import unittest
 
 import cdblib
 
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 
 class DjbHashTestCase(unittest.TestCase):
     def test_known_good(self):
@@ -67,9 +72,7 @@ class ReaderDictLikeTestCase(unittest.TestCase):
             self.assert_(type(self.reader[key]) is str)
 
     def test_values_itervalues(self):
-        all = dict(self.reader.iteritems())
-        inverted = dict((v, k) for (k, v) in all.iteritems())
-
+        inverted = dict((v, k) for (k, v) in self.reader.iteritems())
         for value in self.reader.itervalues():
             self.assert_(value in inverted)
             self.assertEqual(self.reader[inverted[value]], value)
@@ -113,8 +116,64 @@ class ReaderDictLikeTestCase(unittest.TestCase):
 
 
 class ReaderNativeInterfaceTestCase(unittest.TestCase):
-    pass
+    def setUp(self):
+        fp = StringIO()
+        writer = cdblib.Writer(fp)
+        for i in range(10):
+            writer.put('dave', str(i))
 
+        self.arts = (u'\N{SNOWMAN}', u'\N{CLOUD}', u'\N{UMBRELLA}')
+        writer.put('dave_no_dups', '1')
+        writer.putstrings('art', self.arts)
+        writer.finalize()
+
+        fp.seek(0)
+        self.reader = cdblib.Reader(fp)
+
+    def test_get(self):
+        # First get on a key should return its first inserted value.
+        self.assertEqual(self.reader.get('dave'), str(0))
+        self.assertEqual(self.reader.get('dave_no_dups'), '1')
+
+        # Default.
+        self.assertEqual(self.reader.get('junk', 'wad'), 'wad')
+        self.assertRaises(KeyError, self.reader.get, 'junk')
+
+    def test_gets(self):
+        self.assertEqual(list(self.reader.gets('dave')),
+                         map(str, range(10)))
+        self.assertEqual(list(self.reader.gets('dave_no_dups')),
+                         ['1'])
+        self.assertEqual(list(self.reader.gets('art')),
+                         [ s.encode('utf-8') for s in self.arts ])
+        self.assertEqual(list(self.reader.gets('junk')), [])
+
+    def test_getint(self):
+        self.assertEqual(self.reader.getint('dave'), 0)
+        self.assertEqual(self.reader.getint('dave_no_dups'), 1)
+        self.assertRaises(ValueError, self.reader.getint, 'art')
+
+        self.assertEqual(self.reader.get('junk', 1), 1)
+        self.assertRaises(KeyError, self.reader.getint, 'junk')
+
+    def test_getints(self):
+        self.assertEqual(list(self.reader.getints('dave')), range(10))
+        self.assertRaises(ValueError, list, self.reader.getints('art'))
+
+        self.assertEqual(list(self.reader.getints('junk')), [])
+
+    def test_getstring(self):
+        self.assertEqual(self.reader.getstring('art'), u'\N{SNOWMAN}')
+        self.assertEqual(type(self.reader.getstring('art')), unicode)
+
+        self.assertEqual(self.reader.getstring('junk', u'\N{COMET}'),
+                         u'\N{COMET}')
+
+    def test_getstrings(self):
+        self.assertEqual(tuple(self.reader.getstrings('art')), self.arts)
+        self.assert_(all(type(s) is unicode
+                     for s in self.reader.getstrings('art')))
+        self.assertEqual(list(self.reader.getstrings('junk')), [])
 
 if __name__ == '__main__':
     unittest.main()
