@@ -27,14 +27,6 @@ def djb_hash(s):
 read_2_le4 = Struct('<LL').unpack
 write_2_le4 = Struct('<LL').pack
 
-def might_mask(fn, _magic=841352530):
-    '''If the given function is Python's hash() function, and we aren't on a
-    32-bit architecture, return the function wrapped in a function that masks
-    its result to 32-bits, otherwise return the original function.'''
-    if fn is hash and hash('dave') != _magic:
-        return lambda s, m=0xffffffff: fn(s) & m
-    return fn
-
 
 class Reader(object):
     '''A dictionary-like object for reading data stored in a Constant
@@ -50,9 +42,9 @@ class Reader(object):
         if len(self.data) < 2048:
             raise IOError('CDB too small')
 
+        self.hash = hash
         self.table_start = None
         self.length = None
-        self.hash = might_mask(hash)
 
     def _get_value(self, pos, key):
         '''Decode the item record stored at the given position, verify its key
@@ -117,7 +109,8 @@ class Reader(object):
     def gets(self, key):
         '''Yield all values for the given key in the database, in the order in
         which they were inserted.'''
-        h = self.hash(key)
+        # Truncate to 32 bits and remove sign.
+        h = self.hash(key) & 0xffffffff
         idx = (h << 3) & 2047
         start, nslots = read_2_le4(self.data[idx:idx+8])
 
@@ -192,7 +185,7 @@ class Writer(object):
         '''Initialize a new instance that writes to the given file-like object
         using the given hash function, or DJB's function if unspecified.'''
         self.fp = fp
-        self.hash = might_mask(hash)
+        self.hash = hash
 
         fp.write('\x00' * 2048)
         self._unordered = [[] for i in range(256)]
@@ -206,7 +199,7 @@ class Writer(object):
         self.fp.write(key)
         self.fp.write(value)
 
-        h = self.hash(key)
+        h = self.hash(key) & 0xffffffff
         self._unordered[h & 0xff].append((h, pos))
 
     def puts(self, key, values):
