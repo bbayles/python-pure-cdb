@@ -66,7 +66,7 @@ class Reader(object):
             return self.data[pos:pos+dlen]
 
     def iteritems(self):
-        '''Like dict.iteritems().'''
+        '''Like dict.iteritems(). Items are returned in insertion order.'''
         if self.table_start is None:
             self.table_start = min(read_2_le4(self.data[i:i+8])[0]
                                    for i in range(0, 2048, 8))
@@ -190,8 +190,7 @@ class Writer(object):
 
     def __init__(self, fp, hash=djb_hash):
         '''Initialize a new instance that writes to the given file-like object
-        and uses the given hash function, or DJB's hash function is None
-        specified.'''
+        using the given hash function, or DJB's function if unspecified.'''
         self.fp = fp
         self.hash = might_mask(hash)
 
