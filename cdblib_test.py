@@ -115,10 +115,10 @@ class ReaderDictLikeTestCase(unittest.TestCase):
         self.assertEqual(get('^^Hashes_Differently', 'default'), 'default')
 
 
-class ReaderNativeInterfaceTestCase(unittest.TestCase):
+class ReaderNativeInterfaceTestBase:
     def setUp(self):
         fp = StringIO()
-        writer = cdblib.Writer(fp)
+        writer = cdblib.Writer(fp, hash=self.HASH_FUNCTION)
         for i in range(10):
             writer.put('dave', str(i))
 
@@ -128,7 +128,7 @@ class ReaderNativeInterfaceTestCase(unittest.TestCase):
         writer.finalize()
 
         fp.seek(0)
-        self.reader = cdblib.Reader(fp)
+        self.reader = cdblib.Reader(fp, hash=self.HASH_FUNCTION)
 
     def test_get(self):
         # First get on a key should return its first inserted value.
@@ -174,6 +174,17 @@ class ReaderNativeInterfaceTestCase(unittest.TestCase):
         self.assert_(all(type(s) is unicode
                      for s in self.reader.getstrings('art')))
         self.assertEqual(list(self.reader.getstrings('junk')), [])
+
+
+class ReaderNativeInterfaceDjbHashTestCase(ReaderNativeInterfaceTestBase,
+                                           unittest.TestCase):
+    HASH_FUNCTION = staticmethod(cdblib.djb_hash)
+
+
+class ReaderNativeInterfaceNativeHashTestCase(ReaderNativeInterfaceTestBase,
+                                              unittest.TestCase):
+    HASH_FUNCTION = staticmethod(hash)
+
 
 if __name__ == '__main__':
     unittest.main()
