@@ -72,7 +72,7 @@ class Reader(object):
         else:
             table_start = min(read_2_le4(self.data[i:i+8])[0]
                               for i in range(0, 2048, 8))
-            self.table_start = table_Start
+            self.table_start = table_start
 
         pos = 2048
         while pos < table_start:
@@ -219,6 +219,10 @@ class Writer(object):
         for value in values:
             self.put(key, value)
 
+    def putkey(self, key):
+        '''Write a key with a 0-length value to the output file.'''
+        self.put(key, '')
+
     def putint(self, key, value):
         '''Write an integer as a base-10 string associated with the given key
         to the output file.'''
@@ -229,7 +233,7 @@ class Writer(object):
         Equivalent to calling putint() in a loop.'''
         self.puts(key, (str(value) for value in values))
 
-    def putstring(self, key, values, encoding='utf-8'):
+    def putstring(self, key, value, encoding='utf-8'):
         '''Write a unicode string associated with the given key to the output
         file after encoding it as UTF-8 or the given encoding.'''
         self.put(key, value.encode('utf-8'))
