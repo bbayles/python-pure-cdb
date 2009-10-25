@@ -281,3 +281,4 @@ for i in range(40):
 writer.finalize()
 
 reader = Reader(file('dave.cdb'), hash=hash)
+'''
