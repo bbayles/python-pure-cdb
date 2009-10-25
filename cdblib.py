@@ -67,15 +67,12 @@ class Reader(object):
 
     def iteritems(self):
         '''Like dict.iteritems().'''
-        if self.table_start:
-            table_start = self.table_start
-        else:
-            table_start = min(read_2_le4(self.data[i:i+8])[0]
-                              for i in range(0, 2048, 8))
-            self.table_start = table_start
+        if self.table_start is None:
+            self.table_start = min(read_2_le4(self.data[i:i+8])[0]
+                                   for i in range(0, 2048, 8))
 
         pos = 2048
-        while pos < table_start:
+        while pos < self.table_start:
             klen, dlen = read_2_le4(self.data[pos:pos+8])
             pos += 8
 
@@ -104,17 +101,16 @@ class Reader(object):
         '''Like dict.values().'''
         return list(p[1] for p in self.iteritems())
 
-    def __contains__(self, k):
+    def has_key(self, k):
         '''Return True if the given key exists in the database.'''
         return self.get(k, None) is not None
-    has_key = __contains__
+    __contains__ = has_key
 
     def __len__(self):
         '''Return the number of records in the database.'''
         if self.length is None:
-            length = sum(read_2_le4(self.data[i:i+8])[1]
-                         for i in range(0, 2048, 8))
-            self.length = length
+            self.length = sum(read_2_le4(self.data[i:i+8])[1]
+                              for i in range(0, 2048, 8))
         return self.length
 
     def gets(self, key):
@@ -236,7 +232,7 @@ class Writer(object):
     def putstring(self, key, value, encoding='utf-8'):
         '''Write a unicode string associated with the given key to the output
         file after encoding it as UTF-8 or the given encoding.'''
-        self.put(key, value.encode('utf-8'))
+        self.put(key, value.encode(encoding))
 
     def putstrings(self, key, values, encoding='utf-8'):
         '''Write zero or more unicode strings to the output file. Equivalent to
@@ -252,7 +248,6 @@ class Writer(object):
     def finalize(self):
         '''Write the final hash tables to the output file, and write out its
         index. The output file remains open upon return.'''
-
         index = []
         for tbl in self._unordered:
             length = len(tbl) << 1
@@ -269,12 +264,3 @@ class Writer(object):
 
         self.fp.seek(0)
         self._write_tbl(index)
-
-'''
-writer = Writer(file('dave.cdb', 'w'), hash=hash)
-for i in range(40):
-    writer.put('dave', 'dave')
-writer.finalize()
-
-reader = Reader(file('dave.cdb'), hash=hash)
-'''
