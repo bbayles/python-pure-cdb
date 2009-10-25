@@ -109,7 +109,8 @@ class Reader(object):
     def __len__(self):
         '''Return the number of records in the database.'''
         if self.length is None:
-            self.length = sum(read_2_le4(self.data[i:i+8])[1]
+            # TODO(dmw): can't really rely on load factor being 0.5
+            self.length = sum(read_2_le4(self.data[i:i+8])[1] / 2
                               for i in range(0, 2048, 8))
         return self.length
 
