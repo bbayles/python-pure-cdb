@@ -277,9 +277,7 @@ class WriterNativeInterfaceTestBase:
 
         bad = self.make_bad(self.writer.putstrings)
         bad('dave', range(10))
-        # Why do str objects have encode? Stupid. Can't test for this at
-        # runtime without calling list() and an extra for loop.
-        # bad('dave', map(str, lst))
+        bad('dave', map(str, lst))
 
 
 class WriterNativeInterfaceDjbHashTestCase(WriterNativeInterfaceTestBase,

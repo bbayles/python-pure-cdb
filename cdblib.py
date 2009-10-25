@@ -225,12 +225,12 @@ class Writer(object):
     def putstring(self, key, value, encoding='utf-8'):
         '''Write a unicode string associated with the given key to the output
         file after encoding it as UTF-8 or the given encoding.'''
-        self.put(key, value.encode(encoding))
+        self.put(key, unicode.encode(value, encoding))
 
     def putstrings(self, key, values, encoding='utf-8'):
         '''Write zero or more unicode strings to the output file. Equivalent to
         calling putstring() in a loop.'''
-        self.puts(key, (value.encode(encoding) for value in values))
+        self.puts(key, (unicode.encode(value, encoding) for value in values))
 
     def finalize(self):
         '''Write the final hash tables to the output file, and write out its
