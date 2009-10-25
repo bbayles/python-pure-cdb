@@ -248,15 +248,15 @@ class Writer(object):
             ordered = [(0, 0)] * length
             for pair in tbl:
                 where = (pair[0] >> 8) % length
-                for idx in chain(xrange(where, length), xrange(0, where)):
-                    if not ordered[idx][0]:
-                        ordered[idx] = pair
+                for i in chain(xrange(where, length), xrange(0, where)):
+                    if not ordered[i][0]:
+                        ordered[i] = pair
                         break
 
             index.append((self.fp.tell(), length))
-            for pair in tbl:
+            for pair in ordered:
                 self.fp.write(write_2_le4(*pair))
 
         self.fp.seek(0)
-        for pair in tbl:
+        for pair in index:
             self.fp.write(write_2_le4(*pair))
