@@ -1,0 +1,13 @@
+application: cdblib-perftest
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+
+- url: /
+  static_files: cdblib-perftest.html
+  upload: cdblib-perftest.html
+
+- url: .*
+  script: main.py
