@@ -118,7 +118,7 @@ class ReaderNativeInterfaceTestBase:
 
     def setUp(self):
         self.sio = sio = StringIO()
-        writer = cdblib.Writer(sio, hash=self.HASH_FUNCTION)
+        writer = cdblib.Writer(sio, hashfn=self.HASHFN)
         writer.puts('dave', (str(i) for i in xrange(10)))
         writer.put('dave_no_dups', '1')
         writer.put('dave_hex', '0x1a')
@@ -126,7 +126,7 @@ class ReaderNativeInterfaceTestBase:
         writer.finalize()
 
         sio.seek(0)
-        self.reader = cdblib.Reader(fileobj=sio, hash=self.HASH_FUNCTION)
+        self.reader = cdblib.Reader(fileobj=sio, hashfn=self.HASHFN)
 
     def test_constructor_file_like(self):
         pass # done in setUp
@@ -192,29 +192,29 @@ class ReaderNativeInterfaceTestBase:
 
 class ReaderNativeInterfaceDjbHashTestCase(ReaderNativeInterfaceTestBase,
                                            unittest.TestCase):
-    HASH_FUNCTION = staticmethod(cdblib.djb_hash)
+    HASHFN = staticmethod(cdblib.djb_hash)
 
 
 class ReaderNativeInterfaceNativeHashTestCase(ReaderNativeInterfaceTestBase,
                                               unittest.TestCase):
-    HASH_FUNCTION = staticmethod(hash)
+    HASHFN = staticmethod(hash)
 
 
 class ReaderNativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
                                             unittest.TestCase):
     # Ensure collisions don't result in the wrong keys being returned.
-    HASH_FUNCTION = staticmethod(lambda s: 1)
+    HASHFN = staticmethod(lambda s: 1)
 
 
 class WriterNativeInterfaceTestBase:
     def setUp(self):
         self.fp = StringIO()
-        self.writer = cdblib.Writer(self.fp, hash=self.HASH_FUNCTION)
+        self.writer = cdblib.Writer(self.fp, hashfn=self.HASHFN)
 
     def get_reader(self):
         self.writer.finalize()
         self.fp.seek(0)
-        return cdblib.Reader(fileobj=self.fp, hash=self.HASH_FUNCTION)
+        return cdblib.Reader(fileobj=self.fp, hashfn=self.HASHFN)
 
     def make_bad(self, method):
         return partial(self.assertRaises, Exception, method)
@@ -294,23 +294,23 @@ class WriterNativeInterfaceTestBase:
 
 class WriterNativeInterfaceDjbHashTestCase(WriterNativeInterfaceTestBase,
                                            unittest.TestCase):
-    HASH_FUNCTION = staticmethod(cdblib.djb_hash)
+    HASHFN = staticmethod(cdblib.djb_hash)
 
 
 class WriterNativeInterfaceNativeHashTestCase(WriterNativeInterfaceTestBase,
                                               unittest.TestCase):
-    HASH_FUNCTION = staticmethod(hash)
+    HASHFN = staticmethod(hash)
 
 
 class WriterNativeInterfaceNullHashTestCase(WriterNativeInterfaceTestBase,
                                             unittest.TestCase):
-    HASH_FUNCTION = staticmethod(lambda s: 1)
+    HASHFN = staticmethod(lambda s: 1)
 
 
 class WriterKnownGoodTestBase:
     def setUp(self):
         self.fp = StringIO()
-        self.writer = cdblib.Writer(self.fp, hash=self.HASH_FUNCTION)
+        self.writer = cdblib.Writer(self.fp, hashfn=self.HASHFN)
 
     def get_md5(self):
         self.writer.finalize()
@@ -328,7 +328,7 @@ class WriterKnownGoodTestBase:
         self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
 
     def get_iteritems(self, filename):
-        reader = cdblib.Reader(fileobj=file(filename), hash=self.HASH_FUNCTION)
+        reader = cdblib.Reader(fileobj=file(filename), hashfn=self.HASHFN)
         return reader.iteritems()
 
     def test_known_good_top250(self):
@@ -344,7 +344,7 @@ class WriterKnownGoodTestBase:
 
 class WriterKnownGoodDjbHashTestCase(WriterKnownGoodTestBase,
                                      unittest.TestCase):
-    HASH_FUNCTION = staticmethod(cdblib.djb_hash)
+    HASHFN = staticmethod(cdblib.djb_hash)
 
     EMPTY_MD5 = 'a646d6b87720195feb973de130b10123'
     SINGLE_REC_MD5 = 'd94cdc896807d5b7ab5be0078d1469dc'
@@ -355,7 +355,7 @@ class WriterKnownGoodDjbHashTestCase(WriterKnownGoodTestBase,
 
 class WriterKnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
                                         unittest.TestCase):
-    HASH_FUNCTION = staticmethod(hash)
+    HASHFN = staticmethod(hash)
 
     EMPTY_MD5 = 'a646d6b87720195feb973de130b10123'
     SINGLE_REC_MD5 = '9121969c106905e3fd72162c7bbb96a8'
@@ -366,7 +366,7 @@ class WriterKnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
 
 class WriterKnownGoodNullHashTestCase(WriterKnownGoodTestBase,
                                       unittest.TestCase):
-    HASH_FUNCTION = staticmethod(lambda s: 1)
+    HASHFN = staticmethod(lambda s: 1)
 
     EMPTY_MD5 = 'a646d6b87720195feb973de130b10123'
     SINGLE_REC_MD5 = 'f8cc0cdd90fe45193f7d53980c354d5f'

@@ -32,9 +32,9 @@ class Reader(object):
     '''A dictionary-like object for reading data stored in a Constant
     Database.'''
 
-    __slots__ = ('data', 'table_start', 'length', 'hash')
+    __slots__ = ('data', 'table_start', 'length', 'hashfn')
 
-    def __init__(self, sequence=None, fileobj=None, hash=djb_hash):
+    def __init__(self, sequence=None, fileobj=None, hashfn=djb_hash):
         '''Create an instance, reading from the given file-like object, or
         using the given sliceable string-like sequence, optionally specifying a
         non-default hash function.'''
@@ -42,7 +42,7 @@ class Reader(object):
         if len(self.data) < 2048:
             raise IOError('CDB too small')
 
-        self.hash = hash
+        self.hashfn = hashfn
         self.table_start = None
         self.length = None
 
@@ -114,7 +114,7 @@ class Reader(object):
         '''Yield all values for the given key in the database, in the order in
         which they were inserted.'''
         # Truncate to 32 bits and remove sign.
-        h = self.hash(key) & 0xffffffff
+        h = self.hashfn(key) & 0xffffffff
         idx = (h << 3) & 2047
         start, nslots = read_2_le4(self.data[idx:idx+8])
 
@@ -185,11 +185,11 @@ class Writer(object):
     '''Object for building new Constant Databases, and writing them to a
     seekable file-like object.'''
 
-    def __init__(self, fp, hash=djb_hash):
+    def __init__(self, fp, hashfn=djb_hash):
         '''Initialize a new instance that writes to the given file-like object
         using the given hash function, or DJB's function if unspecified.'''
         self.fp = fp
-        self.hash = hash
+        self.hashfn = hashfn
 
         fp.write('\x00' * 2048)
         self._unordered = [[] for i in range(256)]
@@ -203,7 +203,7 @@ class Writer(object):
         self.fp.write(key)
         self.fp.write(value)
 
-        h = self.hash(key) & 0xffffffff
+        h = self.hashfn(key) & 0xffffffff
         self._unordered[h & 0xff].append((h, pos))
 
     def puts(self, key, values):
