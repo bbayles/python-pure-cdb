@@ -34,11 +34,11 @@ class Reader(object):
 
     __slots__ = ('data', 'table_start', 'length', 'hash')
 
-    def __init__(self, fp, hash=djb_hash):
-        '''Initialize a new instance by reading the CDB from the given
-        file-like object into memory, optionally specifying a non-default hash
-        function (e.g. __builtin__.hash).'''
-        self.data = fp.read()
+    def __init__(self, sequence=None, fileobj=None, hash=djb_hash):
+        '''Create an instance, reading from the given file-like object, or
+        using the given sliceable string-like sequence, optionally specifying a
+        non-default hash function.'''
+        self.data = sequence or fileobj.read()
         if len(self.data) < 2048:
             raise IOError('CDB too small')
 
@@ -75,6 +75,10 @@ class Reader(object):
             pos += dlen
 
             yield key, data
+
+    def items(self):
+        '''Like dict.items().'''
+        return list(self.iteritems())
 
     def iterkeys(self):
         '''Like dict.iterkeys().'''

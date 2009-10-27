@@ -25,7 +25,7 @@ class DjbHashTestCase(unittest.TestCase):
 class ReaderKnownGoodTestCase(unittest.TestCase):
     def reader_to_cdbmake_md5(self, filename):
         md5 = hashlib.md5()
-        for key, value in cdblib.Reader(file(filename)).iteritems():
+        for key, value in cdblib.Reader(fileobj=file(filename)).iteritems():
             md5.update('+%d,%d:%s->%s\n' % (len(key), len(value),
                                             key, value))
         md5.update('\n')
@@ -42,7 +42,7 @@ class ReaderKnownGoodTestCase(unittest.TestCase):
 
 class ReaderDictLikeTestCase(unittest.TestCase):
     def setUp(self):
-        self.reader = cdblib.Reader(file('testdata/top250pws.cdb'))
+        self.reader = cdblib.Reader(fileobj=file('testdata/top250pws.cdb'))
 
     def test_iteritems(self):
         uniq_keys = set()
@@ -56,7 +56,12 @@ class ReaderDictLikeTestCase(unittest.TestCase):
         for key in uniq_keys:
             self.assertTrue(self.reader[key] in uniq_values)
 
-    def test_keys_iterkeys(self):
+    def test_items(self):
+        for idx, (key, value) in enumerate(self.reader.items()):
+            self.assertEqual(self.reader[key], value)
+        self.assertEqual(idx, 249)
+
+    def test_iterkeys(self):
         for key in self.reader.iterkeys():
             self.assert_(type(self.reader[key]) is str)
 
@@ -112,16 +117,23 @@ class ReaderNativeInterfaceTestBase:
     ARTS = (u'\N{SNOWMAN}', u'\N{CLOUD}', u'\N{UMBRELLA}')
 
     def setUp(self):
-        fp = StringIO()
-        writer = cdblib.Writer(fp, hash=self.HASH_FUNCTION)
+        self.sio = sio = StringIO()
+        writer = cdblib.Writer(sio, hash=self.HASH_FUNCTION)
         writer.puts('dave', (str(i) for i in xrange(10)))
         writer.put('dave_no_dups', '1')
         writer.put('dave_hex', '0x1a')
         writer.putstrings('art', self.ARTS)
         writer.finalize()
 
-        fp.seek(0)
-        self.reader = cdblib.Reader(fp, hash=self.HASH_FUNCTION)
+        sio.seek(0)
+        self.reader = cdblib.Reader(fileobj=sio, hash=self.HASH_FUNCTION)
+
+    def test_constructor_file_like(self):
+        pass # done in setUp
+
+    def test_constructor_sequence(self):
+        reader = cdblib.Reader(sequence=self.sio.getvalue())
+        self.assertEqual(self.reader.items(), reader.items())
 
     def test_insertion_order(self):
         keys  = ['dave'] * 10
@@ -202,7 +214,7 @@ class WriterNativeInterfaceTestBase:
     def get_reader(self):
         self.writer.finalize()
         self.fp.seek(0)
-        return cdblib.Reader(self.fp, hash=self.HASH_FUNCTION)
+        return cdblib.Reader(fileobj=self.fp, hash=self.HASH_FUNCTION)
 
     def make_bad(self, method):
         return partial(self.assertRaises, Exception, method)
@@ -316,7 +328,7 @@ class WriterKnownGoodTestBase:
         self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
 
     def get_iteritems(self, filename):
-        reader = cdblib.Reader(file(filename), hash=self.HASH_FUNCTION)
+        reader = cdblib.Reader(fileobj=file(filename), hash=self.HASH_FUNCTION)
         return reader.iteritems()
 
     def test_known_good_top250(self):
