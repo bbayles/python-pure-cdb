@@ -34,13 +34,12 @@ class Reader(object):
 
     __slots__ = ('data', 'table_start', 'length', 'hashfn')
 
-    def __init__(self, sequence=None, fileobj=None, hashfn=djb_hash):
-        '''Create an instance, reading from the given file-like object, or
-        using the given sliceable string-like sequence, optionally specifying a
-        non-default hash function.'''
-        self.data = sequence or fileobj.read()
-        if len(self.data) < 2048:
+    def __init__(self, sequence, hashfn=djb_hash):
+        '''Create an instance using the given string-like sequence, optionally
+        specifying a non-default hash function.'''
+        if len(sequence) < 2048:
             raise IOError('CDB too small')
+        self.data = sequence
 
         self.hashfn = hashfn
         self.table_start = None
@@ -257,3 +256,4 @@ class Writer(object):
         self.fp.seek(0)
         for pair in index:
             self.fp.write(write_2_le4(*pair))
+        self.fp = None # prevent double finalize()

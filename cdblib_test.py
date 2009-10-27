@@ -25,7 +25,7 @@ class DjbHashTestCase(unittest.TestCase):
 class ReaderKnownGoodTestCase(unittest.TestCase):
     def reader_to_cdbmake_md5(self, filename):
         md5 = hashlib.md5()
-        for key, value in cdblib.Reader(fileobj=file(filename)).iteritems():
+        for key, value in cdblib.Reader(file(filename).read()).iteritems():
             md5.update('+%d,%d:%s->%s\n' % (len(key), len(value),
                                             key, value))
         md5.update('\n')
@@ -42,7 +42,7 @@ class ReaderKnownGoodTestCase(unittest.TestCase):
 
 class ReaderDictLikeTestCase(unittest.TestCase):
     def setUp(self):
-        self.reader = cdblib.Reader(fileobj=file('testdata/top250pws.cdb'))
+        self.reader = cdblib.Reader(file('testdata/top250pws.cdb').read())
 
     def test_iteritems(self):
         uniq_keys = set()
@@ -126,14 +126,7 @@ class ReaderNativeInterfaceTestBase:
         writer.finalize()
 
         sio.seek(0)
-        self.reader = cdblib.Reader(fileobj=sio, hashfn=self.HASHFN)
-
-    def test_constructor_file_like(self):
-        pass # done in setUp
-
-    def test_constructor_sequence(self):
-        reader = cdblib.Reader(sequence=self.sio.getvalue())
-        self.assertEqual(self.reader.items(), reader.items())
+        self.reader = cdblib.Reader(sio.getvalue(), hashfn=self.HASHFN)
 
     def test_insertion_order(self):
         keys  = ['dave'] * 10
@@ -208,13 +201,12 @@ class ReaderNativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
 
 class WriterNativeInterfaceTestBase:
     def setUp(self):
-        self.fp = StringIO()
-        self.writer = cdblib.Writer(self.fp, hashfn=self.HASHFN)
+        self.sio = sio = StringIO()
+        self.writer = cdblib.Writer(sio, hashfn=self.HASHFN)
 
     def get_reader(self):
         self.writer.finalize()
-        self.fp.seek(0)
-        return cdblib.Reader(fileobj=self.fp, hashfn=self.HASHFN)
+        return cdblib.Reader(self.sio.getvalue(), hashfn=self.HASHFN)
 
     def make_bad(self, method):
         return partial(self.assertRaises, Exception, method)
@@ -256,8 +248,10 @@ class WriterNativeInterfaceTestBase:
     def test_putint(self):
         self.writer.putint('dave', 26)
         self.writer.putint('dave2', 26<<32)
-        self.assertEqual(self.get_reader().getint('dave'), 26)
-        self.assertEqual(self.get_reader().getint('dave2'), 26<<32)
+
+        reader = self.get_reader()
+        self.assertEqual(reader.getint('dave'), 26)
+        self.assertEqual(reader.getint('dave2'), 26<<32)
 
         bad = self.make_bad(self.writer.putint)
         bad(True)
@@ -328,7 +322,7 @@ class WriterKnownGoodTestBase:
         self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
 
     def get_iteritems(self, filename):
-        reader = cdblib.Reader(fileobj=file(filename), hashfn=self.HASHFN)
+        reader = cdblib.Reader(file(filename).read(), hashfn=self.HASHFN)
         return reader.iteritems()
 
     def test_known_good_top250(self):
