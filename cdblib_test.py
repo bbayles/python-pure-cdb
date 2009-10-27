@@ -234,17 +234,6 @@ class WriterNativeInterfaceTestBase:
         bad('dave', (123,))
         bad(123, lst)
 
-    def test_putkey(self):
-        self.writer.putkey('dave')
-        reader = self.get_reader()
-        self.assert_('dave' in reader)
-        self.assertEqual(reader['dave'], '')
-
-        bad = self.make_bad(self.writer.putkey)
-        bad(123)
-        bad(u'dave')
-        bad(True)
-
     def test_putint(self):
         self.writer.putint('dave', 26)
         self.writer.putint('dave2', 26<<32)

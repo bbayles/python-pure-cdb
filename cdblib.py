@@ -193,7 +193,7 @@ class Writer(object):
         fp.write('\x00' * 2048)
         self._unordered = [[] for i in range(256)]
 
-    def put(self, key, value):
+    def put(self, key, value=''):
         '''Write a string key/value pair to the output file.'''
         assert type(key) is str and type(value) is str
 
@@ -210,10 +210,6 @@ class Writer(object):
         Equivalent to calling put() in a loop.'''
         for value in values:
             self.put(key, value)
-
-    def putkey(self, key):
-        '''Write a key with a 0-length value to the output file.'''
-        self.put(key, '')
 
     def putint(self, key, value):
         '''Write an integer as a base-10 string associated with the given key
