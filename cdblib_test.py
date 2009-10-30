@@ -297,12 +297,12 @@ class WriterNativeInterfaceNullHashTestCase(WriterNativeInterfaceTestBase,
 
 class WriterKnownGoodTestBase:
     def setUp(self):
-        self.fp = StringIO()
-        self.writer = cdblib.Writer(self.fp, hashfn=self.HASHFN)
+        self.sio = StringIO()
+        self.writer = cdblib.Writer(self.sio, hashfn=self.HASHFN)
 
     def get_md5(self):
         self.writer.finalize()
-        return hashlib.md5(self.fp.getvalue()).hexdigest()
+        return hashlib.md5(self.sio.getvalue()).hexdigest()
 
     def test_empty(self):
         self.assertEqual(self.get_md5(), self.EMPTY_MD5)
