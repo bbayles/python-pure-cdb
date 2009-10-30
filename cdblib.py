@@ -103,7 +103,7 @@ class Reader(object):
 
     def has_key(self, k):
         '''Return True if the given key exists in the database.'''
-        return self.get(k, None) is not None
+        return self.get(k) is not None
     __contains__ = has_key
 
     def __len__(self):
