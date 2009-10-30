@@ -15,12 +15,17 @@ from _struct import Struct
 from itertools import chain
 
 
-def djb_hash(s):
+def py_djb_hash(s):
     '''Return the value of DJB's hash function for the given 8-bit string.'''
     h = 5381
     for c in s:
         h = (((h << 5) + h) ^ ord(c)) & 0xffffffff
     return h # for small strings, masking here is faster.
+
+try:
+    from _cdblib import djb_hash
+except ImportError:
+    djb_hash = py_djb_hash
 
 read_2_le4 = Struct('<LL').unpack
 write_2_le4 = Struct('<LL').pack
@@ -30,15 +35,13 @@ class Reader(object):
     '''A dictionary-like object for reading data stored in a Constant
     Database.'''
 
-    __slots__ = ('data', 'table_start', 'length', 'hashfn')
-
     def __init__(self, data, hashfn=djb_hash):
         '''Create an instance using the given string-like sequence, optionally
         specifying a non-default hash function.'''
         if len(data) < 2048:
             raise IOError('CDB too small')
-        self.data = data
 
+        self.data = data
         self.hashfn = hashfn
         self.table_start = None
         self.length = None
@@ -109,8 +112,8 @@ class Reader(object):
     def __len__(self):
         '''Return the number of records in the database.'''
         if self.length is None:
-            # TODO(dmw): can't really rely on load factor being 0.5
-            self.length = sum(read_2_le4(self.data[i:i+8])[1] / 2
+            # Assume load load factor is 0.5 like official CDB.
+            self.length = sum(read_2_le4(self.data[i:i+8])[1] >> 1
                               for i in xrange(0, 2048, 8))
         return self.length
 
