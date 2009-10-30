@@ -101,8 +101,8 @@ class ReaderDictLikeTestCase(unittest.TestCase):
 
         self.assertEqual(get('123456'), '1')
         self.assertEqual(get('love'), '12')
-        self.assertRaises(KeyError, get, '!!KinDaCompleX')
-        self.assertRaises(KeyError, get, '^^Hashes_Differently')
+        self.assertEqual(get('!!KinDaCompleX'), None)
+        self.assertEqual(get('^^Hashes_Differently'), None)
 
     def test_get_default(self):
         get = self.reader.get
@@ -142,7 +142,12 @@ class ReaderNativeInterfaceTestBase:
 
         # Default.
         self.assertEqual(self.reader.get('junk', 'wad'), 'wad')
-        self.assertRaises(KeyError, self.reader.get, 'junk')
+        self.assertEqual(None, self.reader.get('junk'))
+
+    def test__getitem__(self):
+        self.assertEqual(self.reader['dave'], str(0))
+        self.assertEqual(self.reader['dave_no_dups'], '1')
+        self.assertRaises(KeyError, lambda: self.reader['junk'])
 
     def test_gets(self):
         self.assertEqual(list(self.reader.gets('dave')),
@@ -160,7 +165,7 @@ class ReaderNativeInterfaceTestBase:
         self.assertRaises(ValueError, self.reader.getint, 'art')
 
         self.assertEqual(self.reader.get('junk', 1), 1)
-        self.assertRaises(KeyError, self.reader.getint, 'junk')
+        self.assertEqual(None, self.reader.getint('junk'))
 
     def test_getints(self):
         self.assertEqual(list(self.reader.getints('dave')), range(10))
@@ -171,7 +176,7 @@ class ReaderNativeInterfaceTestBase:
     def test_getstring(self):
         self.assertEqual(self.reader.getstring('art'), u'\N{SNOWMAN}')
         self.assertEqual(type(self.reader.getstring('art')), unicode)
-        self.assertRaises(KeyError, self.reader.getstring, 'junk')
+        self.assertEqual(None, self.reader.getstring('junk'))
 
         self.assertEqual(self.reader.getstring('junk', u'\N{COMET}'),
                          u'\N{COMET}')

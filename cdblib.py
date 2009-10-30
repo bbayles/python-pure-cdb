@@ -15,8 +15,6 @@ from _struct import Struct
 from itertools import chain
 
 
-UNSPECIFIED = [None]
-
 def djb_hash(s):
     '''Return the value of DJB's hash function for the given 8-bit string.'''
     h = 5381
@@ -96,6 +94,13 @@ class Reader(object):
         '''Like dict.values().'''
         return list(p[1] for p in self.iteritems())
 
+    def __getitem__(self, key):
+        '''Like dict.__getitem__().'''
+        value = self.get(key)
+        if value is None:
+            raise KeyError(key)
+        return value
+
     def has_key(self, k):
         '''Return True if the given key exists in the database.'''
         return self.get(k, None) is not None
@@ -132,46 +137,33 @@ class Reader(object):
                     if value is not None:
                         yield value
 
-    def get(self, key, default=UNSPECIFIED):
-        '''Return the first value for the given key in the database, raising
-        KeyError if it does not exist, or returning a default value if
-        specified.'''
-        if default is UNSPECIFIED:
-            try:
-                return self.gets(key).next()
-            except StopIteration:
-                raise KeyError(key)
-
+    def get(self, key, default=None):
+        '''Return the first value for the given key in the database, or if it
+        doesn't exist, return None or the given default.'''
         # Avoid exception catch when handling default case; much faster.
         return chain(self.gets(key), (default,)).next()
-    __getitem__ = get
 
-    def getint(self, key, default=UNSPECIFIED, base=0):
-        '''Return the first value for the given key converted to an integer,
-        raising KeyError if it does not exist, or returning a default value if
-        specified.'''
-        value = self.get(key, None)
-        if value is None:
-            if default is UNSPECIFIED:
-                raise KeyError(key)
-            return default
-        return int(value, base)
+    def getint(self, key, default=None, base=0):
+        '''Return the first value for the given key converted to an integer, or
+        if it doesn't exist, return None or the given default.'''
+        value = self.get(key, default)
+        if value is not default:
+            return int(value, base)
+        return value
 
     def getints(self, key, base=0):
         '''Yield all values for the given key in the database, in the order in
         which they were inserted, after converting them to integers.'''
         return (int(v, base) for v in self.gets(key))
 
-    def getstring(self, key, default=UNSPECIFIED, encoding='utf-8'):
+    def getstring(self, key, default=None, encoding='utf-8'):
         '''Return the first value for the given key decoded as a UTF-8 string
-        or the encoding specified, raising KeyError if it does not exist, or
-        returning a default value if specified.'''
-        value = self.get(key, None)
-        if value is None:
-            if default is UNSPECIFIED:
-                raise KeyError(key)
-            return default
-        return value.decode(encoding)
+        or the encoding specified, or if it doesn't exist, return None or the
+        given default.'''
+        value = self.get(key, default)
+        if value is not default:
+            return value.decode(encoding)
+        return value
 
     def getstrings(self, key, encoding='utf-8'):
         '''Yield all values for the given key in the database, in the order in
