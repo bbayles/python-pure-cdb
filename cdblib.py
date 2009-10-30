@@ -58,7 +58,7 @@ class Reader(object):
         '''Like dict.iteritems(). Items are returned in insertion order.'''
         if self.table_start is None:
             self.table_start = min(read_2_le4(self.data[i:i+8])[0]
-                                   for i in range(0, 2048, 8))
+                                   for i in xrange(0, 2048, 8))
 
         pos = 2048
         while pos < self.table_start:
@@ -111,7 +111,7 @@ class Reader(object):
         if self.length is None:
             # TODO(dmw): can't really rely on load factor being 0.5
             self.length = sum(read_2_le4(self.data[i:i+8])[1] / 2
-                              for i in range(0, 2048, 8))
+                              for i in xrange(0, 2048, 8))
         return self.length
 
     def gets(self, key):
@@ -183,7 +183,7 @@ class Writer(object):
         self.hashfn = hashfn
 
         fp.write('\x00' * 2048)
-        self._unordered = [[] for i in range(256)]
+        self._unordered = [[] for i in xrange(256)]
 
     def put(self, key, value=''):
         '''Write a string key/value pair to the output file.'''
