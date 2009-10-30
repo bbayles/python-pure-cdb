@@ -32,12 +32,12 @@ class Reader(object):
 
     __slots__ = ('data', 'table_start', 'length', 'hashfn')
 
-    def __init__(self, sequence, hashfn=djb_hash):
+    def __init__(self, data, hashfn=djb_hash):
         '''Create an instance using the given string-like sequence, optionally
         specifying a non-default hash function.'''
-        if len(sequence) < 2048:
+        if len(data) < 2048:
             raise IOError('CDB too small')
-        self.data = sequence
+        self.data = data
 
         self.hashfn = hashfn
         self.table_start = None
