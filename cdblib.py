@@ -79,11 +79,11 @@ class Reader(object):
 
     def keys(self):
         '''Like dict.keys().'''
-        return list(p[0] for p in self.iteritems())
+        return [p[0] for p in self.iteritems()]
 
     def values(self):
         '''Like dict.values().'''
-        return list(p[1] for p in self.iteritems())
+        return [p[1] for p in self.iteritems()]
 
     def __getitem__(self, key):
         '''Like dict.__getitem__().'''
