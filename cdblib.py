@@ -49,17 +49,6 @@ class Reader(object):
         # Assume load load factor is 0.5 like official CDB.
         self.length = sum(p[1] >> 1 for p in self.index)
 
-    def _get_value(self, pos, key):
-        '''Decode the item record stored at the given position, verify its key
-        matches the given key, and return its value part on match, otherwise
-        return None.'''
-        klen, dlen = read_2_le4(self.data[pos:pos+8])
-        pos += 8
-
-        if self.data[pos:pos+klen] == key:
-            pos += klen
-            return self.data[pos:pos+dlen]
-
     def iteritems(self):
         '''Like dict.iteritems(). Items are returned in insertion order.'''
         pos = 2048
@@ -130,9 +119,12 @@ class Reader(object):
                 if not rec_h:
                     break
                 elif rec_h == h:
-                    value = self._get_value(rec_pos, key)
-                    if value is not None:
-                        yield value
+                    klen, dlen = read_2_le4(self.data[rec_pos:rec_pos+8])
+                    rec_pos += 8
+
+                    if self.data[rec_pos:rec_pos+klen] == key:
+                        rec_pos += klen
+                        yield self.data[rec_pos:rec_pos+dlen]
 
     def get(self, key, default=None):
         '''Return the first value for the given key in the database, or if it
