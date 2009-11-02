@@ -2,13 +2,12 @@
 
 '''
 Manipulate DJB's Constant Databases. These are 2 level disk-based hash tables
-that efficiently handle thousands of keys, while remaining space-efficient.
+that efficiently handle many keys, while remaining space-efficient.
 
     http://cr.yp.to/cdb.html
 
-Note the Reader class reads the entire CDB into memory. When using Writer,
-consider using Python's hash() instead of djb_hash() for a tidy speedup,
-however readers must be similarly configured.
+When generated databases are only used with Python code, consider using hash()
+rather than djb_hash() for a tidy speedup.
 '''
 
 from _struct import Struct
@@ -20,7 +19,7 @@ def py_djb_hash(s):
     h = 5381
     for c in s:
         h = (((h << 5) + h) ^ ord(c)) & 0xffffffff
-    return h # for small strings, masking here is faster.
+    return h
 
 try:
     from _cdblib import djb_hash
@@ -32,12 +31,12 @@ write_2_le4 = Struct('<LL').pack
 
 
 class Reader(object):
-    '''A dictionary-like object for reading data stored in a Constant
-    Database.'''
+    '''A dictionary-like object for reading a Constant Database accessed
+    through a string or string-like sequence, such as mmap.mmap().'''
 
     def __init__(self, data, hashfn=djb_hash):
-        '''Create an instance using the given string-like sequence, optionally
-        specifying a non-default hash function.'''
+        '''Create an instance reading from a sequence and using hashfn to hash
+        keys.'''
         if len(data) < 2048:
             raise IOError('CDB too small')
 
@@ -92,9 +91,9 @@ class Reader(object):
             raise KeyError(key)
         return value
 
-    def has_key(self, k):
-        '''Return True if the given key exists in the database.'''
-        return self.get(k) is not None
+    def has_key(self, key):
+        '''Return True if key exists in the database.'''
+        return self.get(key) is not None
     __contains__ = has_key
 
     def __len__(self):
@@ -102,8 +101,7 @@ class Reader(object):
         return self.length
 
     def gets(self, key):
-        '''Yield all values for the given key in the database, in the order in
-        which they were inserted.'''
+        '''Yield values for key in insertion order.'''
         # Truncate to 32 bits and remove sign.
         h = self.hashfn(key) & 0xffffffff
         start, nslots = self.index[h & 255]
@@ -127,37 +125,33 @@ class Reader(object):
                         yield self.data[rec_pos:rec_pos+dlen]
 
     def get(self, key, default=None):
-        '''Return the first value for the given key in the database, or if it
-        doesn't exist, return None or the given default.'''
+        '''Get the first value for key, returning default if missing.'''
         # Avoid exception catch when handling default case; much faster.
         return chain(self.gets(key), (default,)).next()
 
     def getint(self, key, default=None, base=0):
-        '''Return the first value for the given key converted to an integer, or
-        if it doesn't exist, return None or the given default.'''
+        '''Get the first value for key converted it to an int, returning
+        default if missing.'''
         value = self.get(key, default)
         if value is not default:
             return int(value, base)
         return value
 
     def getints(self, key, base=0):
-        '''Yield all values for the given key in the database, in the order in
-        which they were inserted, after converting them to integers.'''
+        '''Yield values for key in insertion order after converting to int.'''
         return (int(v, base) for v in self.gets(key))
 
     def getstring(self, key, default=None, encoding='utf-8'):
-        '''Return the first value for the given key decoded as a UTF-8 string
-        or the encoding specified, or if it doesn't exist, return None or the
-        given default.'''
+        '''Get the first value for key decoded as unicode, returning default if
+        not found.'''
         value = self.get(key, default)
         if value is not default:
             return value.decode(encoding)
         return value
 
     def getstrings(self, key, encoding='utf-8'):
-        '''Yield all values for the given key in the database, in the order in
-        which they were inserted, after decoding them as UTF-8 strings, or the
-        encoding specified.'''
+        '''Yield values for key in insertion order after decoding as
+        unicode.'''
         return (v.decode(encoding) for v in self.gets(key))
 
 
@@ -166,8 +160,8 @@ class Writer(object):
     seekable file-like object.'''
 
     def __init__(self, fp, hashfn=djb_hash):
-        '''Initialize a new instance that writes to the given file-like object
-        using the given hash function, or DJB's function if unspecified.'''
+        '''Create an instance writing to a file-like object, using hashfn to
+        hash keys.'''
         self.fp = fp
         self.hashfn = hashfn
 
