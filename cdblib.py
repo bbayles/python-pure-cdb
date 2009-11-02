@@ -43,8 +43,11 @@ class Reader(object):
 
         self.data = data
         self.hashfn = hashfn
-        self.table_start = None
-        self.length = None
+
+        self.index = [read_2_le4(data[i:i+8]) for i in xrange(0, 2048, 8)]
+        self.table_start = min(p[0] for p in self.index)
+        # Assume load load factor is 0.5 like official CDB.
+        self.length = sum(p[1] >> 1 for p in self.index)
 
     def _get_value(self, pos, key):
         '''Decode the item record stored at the given position, verify its key
@@ -59,10 +62,6 @@ class Reader(object):
 
     def iteritems(self):
         '''Like dict.iteritems(). Items are returned in insertion order.'''
-        if self.table_start is None:
-            self.table_start = min(read_2_le4(self.data[i:i+8])[0]
-                                   for i in xrange(0, 2048, 8))
-
         pos = 2048
         while pos < self.table_start:
             klen, dlen = read_2_le4(self.data[pos:pos+8])
@@ -111,10 +110,6 @@ class Reader(object):
 
     def __len__(self):
         '''Return the number of records in the database.'''
-        if self.length is None:
-            # Assume load load factor is 0.5 like official CDB.
-            self.length = sum(read_2_le4(self.data[i:i+8])[1] >> 1
-                              for i in xrange(0, 2048, 8))
         return self.length
 
     def gets(self, key):
@@ -122,8 +117,7 @@ class Reader(object):
         which they were inserted.'''
         # Truncate to 32 bits and remove sign.
         h = self.hashfn(key) & 0xffffffff
-        idx = (h << 3) & 2047
-        start, nslots = read_2_le4(self.data[idx:idx+8])
+        start, nslots = self.index[h & 255]
 
         if nslots:
             end = start + (nslots << 3)
