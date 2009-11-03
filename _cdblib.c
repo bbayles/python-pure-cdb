@@ -7,7 +7,7 @@ djb_hash(PyObject *self, PyObject *args)
 {
     const unsigned char *s;
     unsigned int h = 5381;
-    int len;
+    Py_ssize_t len;
 
     if(! PyArg_ParseTuple(args, "t#", &s, &len))
         return NULL;
