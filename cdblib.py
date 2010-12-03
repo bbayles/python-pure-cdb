@@ -104,7 +104,7 @@ class Reader(object):
         '''Yield values for key in insertion order.'''
         # Truncate to 32 bits and remove sign.
         h = self.hashfn(key) & 0xffffffff
-        start, nslots = self.index[h & 255]
+        start, nslots = self.index[h & 0xff]
 
         if nslots:
             end = start + (nslots << 3)
