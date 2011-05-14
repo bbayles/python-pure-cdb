@@ -25,7 +25,7 @@ class DjbHashTestCase(unittest.TestCase):
 class ReaderKnownGoodTestCase(unittest.TestCase):
     def reader_to_cdbmake_md5(self, filename):
         md5 = hashlib.md5()
-        for key, value in cdblib.Reader(file(filename).read()).iteritems():
+        for key, value in cdblib.Reader(file(filename, 'rb').read()).iteritems():
             md5.update('+%d,%d:%s->%s\n' % (len(key), len(value),
                                             key, value))
         md5.update('\n')
@@ -42,7 +42,7 @@ class ReaderKnownGoodTestCase(unittest.TestCase):
 
 class ReaderDictLikeTestCase(unittest.TestCase):
     def setUp(self):
-        self.reader = cdblib.Reader(file('testdata/top250pws.cdb').read())
+        self.reader = cdblib.Reader(file('testdata/top250pws.cdb', 'rb').read())
 
     def test_iteritems(self):
         uniq_keys = set()
@@ -316,7 +316,7 @@ class WriterKnownGoodTestBase:
         self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
 
     def get_iteritems(self, filename):
-        reader = cdblib.Reader(file(filename).read(), hashfn=self.HASHFN)
+        reader = cdblib.Reader(file(filename, 'rb').read(), hashfn=self.HASHFN)
         return reader.iteritems()
 
     def test_known_good_top250(self):
