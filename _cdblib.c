@@ -1,3 +1,4 @@
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
 /* Return a Python long instance containing the value of the DJB hash function
