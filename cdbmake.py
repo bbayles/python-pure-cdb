@@ -46,7 +46,7 @@ class CdbMake(object):
 
     def begin(self):
         hash_func = hash if self.python_hash else cdblib.djb_hash
-        self.fp = file(self.tmp_filename, 'w')
+        self.fp = file(self.tmp_filename, 'wb')
         self.writer = cdblib.Writer(self.fp, hash_func)
 
     def parse_input(self):
@@ -84,6 +84,7 @@ class CdbMake(object):
     def end(self):
         self.writer.finalize()
         os.fsync(self.fp.fileno())
+        self.fp.close()
         os.rename(self.tmp_filename, self.filename)
 
     def die(self, fmt, *args):
