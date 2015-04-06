@@ -7,7 +7,7 @@ _cdblib_module = Extension('_cdblib', sources=['_cdblib.c'])
 setup(author='David Wilson',
       author_email='dw@botanicus.net',
       description="Pure Python reader/writer for Dan J. Berstein's CDB format.",
-      download_url='http://code.google.com/p/python-pure-cdb/',
+      download_url='https://github.com/dw/python-pure-cdb',
       keywords='cdb file format appengine database db',
       license='MIT',
       name='pure-cdb',
