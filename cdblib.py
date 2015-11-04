@@ -1,5 +1,3 @@
-#!/usr/bin/env python2.5
-
 '''
 Manipulate DJB's Constant Databases. These are 2 level disk-based hash tables
 that efficiently handle many keys, while remaining space-efficient.
