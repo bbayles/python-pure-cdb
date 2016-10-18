@@ -2,7 +2,7 @@ Manipulate DJB's Constant Database files. These are 2 level disk-based hash tabl
 
 http://cr.yp.to/cdb.html
 
-Note the Reader class reads the entire CDB into memory. When using Writer, consider using Python's `hash()` instead of `djb_hash()` for a tidy speedup, however readers must be similarly configured.
+Note the Reader class reads the entire CDB into memory.
 
 ------
 

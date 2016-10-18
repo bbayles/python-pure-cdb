@@ -1,13 +1,9 @@
-#!/usr/bin/env python2.5
-
 '''
 Manipulate DJB's Constant Databases. These are 2 level disk-based hash tables
 that efficiently handle many keys, while remaining space-efficient.
 
     http://cr.yp.to/cdb.html
 
-When generated databases are only used with Python code, consider using hash()
-rather than djb_hash() for a tidy speedup.
 '''
 
 from _struct import Struct
