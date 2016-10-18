@@ -7,6 +7,7 @@ Usage:
 
 Where:
     -p      Use Python hash() instead of standard DJB hash function.
+    -8      Use cdblib.Writer64 rather than cdblib.Writer.
     output  Eventual destination path, must reside on same filesystem as tmp.
     tmp     Temporary file to use during write. Atomically replaces output at
             end.
@@ -27,16 +28,19 @@ class CdbMake(object):
         self.stdout = stdout
         self.stderr = stderr
         self.python_hash = False
+        self.writer_cls = cdblib.Writer
 
     def parse_args(self, args):
         try:
-            opts, args = getopt.gnu_getopt(args, 'p')
+            opts, args = getopt.gnu_getopt(args, 'p8')
         except getopt.error, e:
             self.usage(str(e))
 
         for opt, arg in opts:
             if opt == '-p':
                 self.python_hash = True
+            elif opt == '-8':
+                self.writer_cls = cdblib.Writer64
 
         if len(args) != 2:
             self.usage('Not enough or too many filenames.')
@@ -47,7 +51,7 @@ class CdbMake(object):
     def begin(self):
         hash_func = hash if self.python_hash else cdblib.djb_hash
         self.fp = file(self.tmp_filename, 'wb')
-        self.writer = cdblib.Writer(self.fp, hash_func)
+        self.writer = self.writer_cls(self.fp, hash_func)
 
     def parse_input(self):
         read = self.stdin.read

@@ -27,7 +27,9 @@ except ImportError:
     djb_hash = py_djb_hash
 
 read_2_le4 = Struct('<LL').unpack
+read_2_le8 = Struct('<QQ').unpack
 write_2_le4 = Struct('<LL').pack
+write_2_le8 = Struct('<QQ').pack
 
 
 class Reader(object):
@@ -162,6 +164,15 @@ class Reader(object):
         return (v.decode(encoding) for v in self.gets(key))
 
 
+class Reader64(Reader):
+    '''A cdblib.Reader variant to support reading from CDB files that use
+    64-bit file offsets. The CDB file must be generated with an appropriate
+    writer.'''
+
+    read_pair = staticmethod(read_2_le8)
+    pair_size = 16
+
+
 class Writer(object):
     '''Object for building new Constant Databases, and writing them to a
     seekable file-like object.'''
@@ -238,3 +249,11 @@ class Writer(object):
         for pair in index:
             self.fp.write(self.write_pair(*pair))
         self.fp = None # prevent double finalize()
+
+
+class Writer64(Writer):
+    '''A cdblib.Writer variant to support writing CDB files that use 64-bit
+    file offsets.'''
+
+    write_pair = staticmethod(write_2_le8)
+    pair_size = 16

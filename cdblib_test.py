@@ -23,9 +23,15 @@ class DjbHashTestCase(unittest.TestCase):
 
 
 class ReaderKnownGoodTestCase(unittest.TestCase):
+    reader_cls = cdblib.Reader
+    pwdump_path = 'testdata/pwdump.cdb'
+    pwdump_md5 = '84d38c5b6b5bb01bb374b2f7af0129b1'
+    top250_path = 'testdata/top250pws.cdb'
+    top250_md5 = '0564adfe4667506a326ba2f363415616'
+
     def reader_to_cdbmake_md5(self, filename):
         md5 = hashlib.md5()
-        for key, value in cdblib.Reader(file(filename, 'rb').read()).iteritems():
+        for key, value in self.reader_cls(open(filename, 'rb').read()).iteritems():
             md5.update('+%d,%d:%s->%s\n' % (len(key), len(value),
                                             key, value))
         md5.update('\n')
@@ -34,15 +40,24 @@ class ReaderKnownGoodTestCase(unittest.TestCase):
 
     def test_read_pwdump(self):
         # MD5s here are of the source .cdbmake file.
-        self.assertEqual(self.reader_to_cdbmake_md5('testdata/pwdump.cdb'),
-                         '84d38c5b6b5bb01bb374b2f7af0129b1')
-        self.assertEqual(self.reader_to_cdbmake_md5('testdata/top250pws.cdb'),
-                         '0564adfe4667506a326ba2f363415616')
+        self.assertEqual(self.reader_to_cdbmake_md5(self.pwdump_path),
+                         self.pwdump_md5)
+        self.assertEqual(self.reader_to_cdbmake_md5(self.top250_path),
+                         self.top250_md5)
+
+
+class Reader64KnownGoodTestCase(ReaderKnownGoodTestCase):
+    reader_cls = cdblib.Reader64
+    pwdump_path = 'testdata/pwdump.cdb64'
+    top250_path = 'testdata/top250pws.cdb64'
 
 
 class ReaderDictLikeTestCase(unittest.TestCase):
+    reader_cls = cdblib.Reader
+    data_path = 'testdata/top250pws.cdb'
+
     def setUp(self):
-        self.reader = cdblib.Reader(file('testdata/top250pws.cdb', 'rb').read())
+        self.reader = self.reader_cls(open(self.data_path, 'rb').read())
 
     def test_iteritems(self):
         uniq_keys = set()
@@ -113,12 +128,19 @@ class ReaderDictLikeTestCase(unittest.TestCase):
         self.assertEqual(get('^^Hashes_Differently', 'default'), 'default')
 
 
+class Reader64DictLikeTestCase(ReaderDictLikeTestCase):
+    reader_cls = cdblib.Reader64
+    data_path = 'testdata/top250pws.cdb64'
+
+
 class ReaderNativeInterfaceTestBase:
     ARTS = (u'\N{SNOWMAN}', u'\N{CLOUD}', u'\N{UMBRELLA}')
+    reader_cls = cdblib.Reader
+    writer_cls = cdblib.Writer
 
     def setUp(self):
         self.sio = sio = StringIO()
-        writer = cdblib.Writer(sio, hashfn=self.HASHFN)
+        writer = self.writer_cls(sio, hashfn=self.HASHFN)
         writer.puts('dave', (str(i) for i in xrange(10)))
         writer.put('dave_no_dups', '1')
         writer.put('dave_hex', '0x1a')
@@ -126,7 +148,7 @@ class ReaderNativeInterfaceTestBase:
         writer.finalize()
 
         sio.seek(0)
-        self.reader = cdblib.Reader(sio.getvalue(), hashfn=self.HASHFN)
+        self.reader = self.reader_cls(sio.getvalue(), hashfn=self.HASHFN)
 
     def test_insertion_order(self):
         keys  = ['dave'] * 10
@@ -193,8 +215,22 @@ class ReaderNativeInterfaceDjbHashTestCase(ReaderNativeInterfaceTestBase,
     HASHFN = staticmethod(cdblib.djb_hash)
 
 
+class Reader64NativeInterfaceDjbHashTestCase(ReaderNativeInterfaceTestBase,
+                                             unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
+    HASHFN = staticmethod(cdblib.djb_hash)
+
+
 class ReaderNativeInterfaceNativeHashTestCase(ReaderNativeInterfaceTestBase,
                                               unittest.TestCase):
+    HASHFN = staticmethod(hash)
+
+
+class Reader64NativeInterfaceNativeHashTestCase(ReaderNativeInterfaceTestBase,
+                                                unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
     HASHFN = staticmethod(hash)
 
 
@@ -204,14 +240,25 @@ class ReaderNativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
     HASHFN = staticmethod(lambda s: 1)
 
 
+class Reader64NativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
+                                              unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
+    # Ensure collisions don't result in the wrong keys being returned.
+    HASHFN = staticmethod(lambda s: 1)
+
+
 class WriterNativeInterfaceTestBase:
+    reader_cls = cdblib.Reader
+    writer_cls = cdblib.Writer
+
     def setUp(self):
         self.sio = sio = StringIO()
-        self.writer = cdblib.Writer(sio, hashfn=self.HASHFN)
+        self.writer = self.writer_cls(sio, hashfn=self.HASHFN)
 
     def get_reader(self):
         self.writer.finalize()
-        return cdblib.Reader(self.sio.getvalue(), hashfn=self.HASHFN)
+        return self.reader_cls(self.sio.getvalue(), hashfn=self.HASHFN)
 
     def make_bad(self, method):
         return partial(self.assertRaises, Exception, method)
@@ -285,8 +332,22 @@ class WriterNativeInterfaceDjbHashTestCase(WriterNativeInterfaceTestBase,
     HASHFN = staticmethod(cdblib.djb_hash)
 
 
+class Writer64NativeInterfaceDjbHashTestCase(WriterNativeInterfaceTestBase,
+                                             unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
+    HASHFN = staticmethod(cdblib.djb_hash)
+
+
 class WriterNativeInterfaceNativeHashTestCase(WriterNativeInterfaceTestBase,
                                               unittest.TestCase):
+    HASHFN = staticmethod(hash)
+
+
+class Writer64NativeInterfaceNativeHashTestCase(WriterNativeInterfaceTestBase,
+                                                unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
     HASHFN = staticmethod(hash)
 
 
@@ -295,10 +356,23 @@ class WriterNativeInterfaceNullHashTestCase(WriterNativeInterfaceTestBase,
     HASHFN = staticmethod(lambda s: 1)
 
 
+class WriterNativeInterfaceNullHashTestCase(WriterNativeInterfaceTestBase,
+                                            unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
+    HASHFN = staticmethod(lambda s: 1)
+
+
 class WriterKnownGoodTestBase:
+    reader_cls = cdblib.Reader
+    writer_cls = cdblib.Writer
+
+    top250_path = 'testdata/top250pws.cdb'
+    pwdump_path = 'testdata/pwdump.cdb'
+
     def setUp(self):
         self.sio = StringIO()
-        self.writer = cdblib.Writer(self.sio, hashfn=self.HASHFN)
+        self.writer = self.writer_cls(self.sio, hashfn=self.HASHFN)
 
     def get_md5(self):
         self.writer.finalize()
@@ -316,16 +390,16 @@ class WriterKnownGoodTestBase:
         self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
 
     def get_iteritems(self, filename):
-        reader = cdblib.Reader(file(filename, 'rb').read(), hashfn=self.HASHFN)
+        reader = self.reader_cls(open(filename, 'rb').read(), hashfn=self.HASHFN)
         return reader.iteritems()
 
     def test_known_good_top250(self):
-        for key, value in self.get_iteritems('testdata/top250pws.cdb'):
+        for key, value in self.get_iteritems(self.top250_path):
             self.writer.put(key, value)
         self.assertEqual(self.get_md5(), self.TOP250PWS_MD5)
 
     def test_known_good_pwdump(self):
-        for key, value in self.get_iteritems('testdata/pwdump.cdb'):
+        for key, value in self.get_iteritems(self.pwdump_path):
             self.writer.put(key, value)
         self.assertEqual(self.get_md5(), self.PWDUMP_MD5)
 
@@ -341,6 +415,21 @@ class WriterKnownGoodDjbHashTestCase(WriterKnownGoodTestBase,
     PWDUMP_MD5 = '15993a395e1245af2a476601c219b3e5'
 
 
+class Writer64KnownGoodDjbHashTestCase(WriterKnownGoodTestBase,
+                                       unittest.TestCase):
+    HASHFN = staticmethod(cdblib.djb_hash)
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
+    top250_path = 'testdata/top250pws.cdb64'
+    pwdump_path = 'testdata/pwdump.cdb64'
+
+    EMPTY_MD5 = 'c43c406a037989703e0d58ed9f17ba3c'
+    SINGLE_REC_MD5 = '276ae8223f730b1e67007641db6b69ca'
+    DUP_KEYS_MD5 = '1aae63d751ce5eea9e61916ae0aa00b3'
+    TOP250PWS_MD5 = 'c6bdb3c7645c5d62747ac74895f9e90a'
+    PWDUMP_MD5 = '3b1b4964294897c6ca119a6c6ae0094f'
+
+
 class WriterKnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
                                         unittest.TestCase):
     HASHFN = staticmethod(hash)
@@ -352,6 +441,21 @@ class WriterKnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
     PWDUMP_MD5 = 'd5726fc195460c9eef3117111975532f'
 
 
+class Writer64KnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
+                                          unittest.TestCase):
+    HASHFN = staticmethod(hash)
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
+    top250_path = 'testdata/top250pws.cdb64'
+    pwdump_path = 'testdata/pwdump.cdb64'
+
+    EMPTY_MD5 = 'c43c406a037989703e0d58ed9f17ba3c'
+    SINGLE_REC_MD5 = 'fdd4a8c055d2000cba9b712ceb8a1eba'
+    DUP_KEYS_MD5 = '01e40b34cc51906f798233a2cd0fb09d'
+    TOP250PWS_MD5 = '3cd101954030b153584b620db5255b45'
+    PWDUMP_MD5 = 'a7275f527d54f51c10aebafaae1ab445'
+
+
 class WriterKnownGoodNullHashTestCase(WriterKnownGoodTestBase,
                                       unittest.TestCase):
     HASHFN = staticmethod(lambda s: 1)
@@ -361,6 +465,21 @@ class WriterKnownGoodNullHashTestCase(WriterKnownGoodTestBase,
     DUP_KEYS_MD5 = '3d5ad135593c942cf9621d3d4a1f6637'
     TOP250PWS_MD5 = '0a5fff8836a175460ead340afff2d301'
     PWDUMP_MD5 = 'eac33af35208c7daba0487d0d411b8d5'
+
+
+class Writer64KnownGoodNullHashTestCase(WriterKnownGoodTestBase,
+                                        unittest.TestCase):
+    HASHFN = staticmethod(lambda s: 1)
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
+    top250_path = 'testdata/top250pws.cdb64'
+    pwdump_path = 'testdata/pwdump.cdb64'
+
+    EMPTY_MD5 = 'c43c406a037989703e0d58ed9f17ba3c'
+    SINGLE_REC_MD5 = '91f0614d6ec48e720138d6e962062166'
+    DUP_KEYS_MD5 = 'e1fe0e8ae7bacd9dbe6a87cfccc627fa'
+    TOP250PWS_MD5 = '25519af3e573e867f423956fc6e9b8e8'
+    PWDUMP_MD5 = '5a8d1dd40d82af01cbb23ceab16c1588'
 
 
 if __name__ == '__main__':
