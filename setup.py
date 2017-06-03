@@ -13,5 +13,5 @@ setup(author='David Wilson',
       name='pure-cdb',
       py_modules=['cdblib'],
       ext_modules=[_cdblib_module],
-      version='1.0'
+      version='2.0.0'
 )
