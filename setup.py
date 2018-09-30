@@ -1,8 +1,17 @@
 #!/usr/bin/env python
+from os import environ
+from sys import version_info
 
 from setuptools import Extension, find_packages, setup
 
-_cdblib_module = Extension('cdblib._cdblib', sources=['cdblib/_cdblib.c'])
+# Opt-in to building the C extensions for Python 2 by setting the
+# ENABLE_DJB_HASH_CEXT environment variable
+if (version_info[0] == 2) and environ.get('ENABLE_DJB_HASH_CEXT'):
+    ext_modules = [
+        Extension('cdblib._djb_hash', sources=['cdblib/_djb_hash.c']),
+    ]
+else:
+    ext_modules = []
 
 setup(
     author='David Wilson',
@@ -13,7 +22,7 @@ setup(
     license='MIT',
     name='pure-cdb',
     packages=find_packages(include=['cdblib']),
-    ext_modules=[_cdblib_module],
+    ext_modules=ext_modules,
     install_requires=['six>=1.0.0,<2.0.0'],
     test_suite='tests',
     version='2.0.0'
