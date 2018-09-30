@@ -6,7 +6,7 @@ from setuptools import Extension, find_packages, setup
 
 # Opt-in to building the C extensions for Python 2 by setting the
 # ENABLE_DJB_HASH_CEXT environment variable
-if (version_info[0] == 2) and environ.get('ENABLE_DJB_HASH_CEXT'):
+if environ.get('ENABLE_DJB_HASH_CEXT'):
     ext_modules = [
         Extension('cdblib._djb_hash', sources=['cdblib/_djb_hash.c']),
     ]
