@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.5
+#!/usr/bin/env python
 
 '''Python version of DJB's cdbmake, optionally supporting Python's hash().
 

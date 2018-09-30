@@ -1,25 +1,24 @@
-#!/usr/bin/env python2.5
+#!/usr/bin/env python
+from __future__ import unicode_literals
 
 import hashlib
+import io
 import unittest
 
 from functools import partial
 
-import cdblib
+import six
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+import cdblib
 
 
 class DjbHashTestCase(unittest.TestCase):
     def test_known_good(self):
-        self.assertEqual(cdblib.djb_hash('dave'), 2087378131L)
+        self.assertEqual(cdblib.djb_hash(b'dave'), 2087378131)
 
     def test_correct_wrapping(self):
-        h = cdblib.djb_hash('davedavedavedavedave')
-        self.assertEqual(h, 3529598163L)
+        h = cdblib.djb_hash(b'davedavedavedavedave')
+        self.assertEqual(h, 3529598163)
 
 
 class ReaderKnownGoodTestCase(unittest.TestCase):
@@ -31,10 +30,14 @@ class ReaderKnownGoodTestCase(unittest.TestCase):
 
     def reader_to_cdbmake_md5(self, filename):
         md5 = hashlib.md5()
-        for key, value in self.reader_cls(open(filename, 'rb').read()).iteritems():
-            md5.update('+%d,%d:%s->%s\n' % (len(key), len(value),
-                                            key, value))
-        md5.update('\n')
+
+        with io.open(filename, 'rb') as infile:
+            data = infile.read()
+
+        for key, value in self.reader_cls(data).iteritems():
+            md5.update(b'+%d,%d:%s->%s\n' % (len(key), len(value), key, value))
+
+        md5.update(b'\n')
 
         return md5.hexdigest()
 
@@ -57,7 +60,10 @@ class ReaderDictLikeTestCase(unittest.TestCase):
     data_path = 'testdata/top250pws.cdb'
 
     def setUp(self):
-        self.reader = self.reader_cls(open(self.data_path, 'rb').read())
+        with io.open(self.data_path, 'rb') as infile:
+            data = infile.read()
+
+        self.reader = self.reader_cls(data)
 
     def test_iteritems(self):
         uniq_keys = set()
@@ -78,16 +84,16 @@ class ReaderDictLikeTestCase(unittest.TestCase):
 
     def test_iterkeys(self):
         for key in self.reader.iterkeys():
-            self.assert_(type(self.reader[key]) is str)
+            self.assertIs(type(self.reader[key]), six.binary_type)
 
     def test___iter__(self):
         for key in self.reader:
-            self.assert_(type(self.reader[key]) is str)
+            self.assertIs(type(self.reader[key]), six.binary_type)
 
     def test_values_itervalues(self):
         inverted = dict((v, k) for (k, v) in self.reader.iteritems())
         for value in self.reader.itervalues():
-            self.assert_(value in inverted)
+            self.assertIn(value, inverted)
             self.assertEqual(self.reader[inverted[value]], value)
 
     def test_keys(self):
@@ -98,12 +104,12 @@ class ReaderDictLikeTestCase(unittest.TestCase):
 
     def test_has_key_contains(self):
         for key in self.reader:
-            self.assert_(self.reader.has_key(key))
-            self.assert_(key in self.reader)
+            self.assertTrue(self.reader.has_key(key))
+            self.assertIn(key, self.reader)
 
-        for key in ('zarg zarg warf!', 'doesnt exist really'):
+        for key in (b'zarg zarg warf!', b'doesnt exist really'):
             self.assertFalse(self.reader.has_key(key))
-            self.assertFalse(key in self.reader)
+            self.assertNotIn(key, self.reader)
             # there's no __notcontains__, right?
             self.assertTrue(key not in self.reader)
 
@@ -114,18 +120,18 @@ class ReaderDictLikeTestCase(unittest.TestCase):
     def test_get_no_default(self):
         get = self.reader.get
 
-        self.assertEqual(get('123456'), '1')
-        self.assertEqual(get('love'), '12')
-        self.assertEqual(get('!!KinDaCompleX'), None)
-        self.assertEqual(get('^^Hashes_Differently'), None)
+        self.assertEqual(get(b'123456'), b'1')
+        self.assertEqual(get(b'love'), b'12')
+        self.assertEqual(get(b'!!KinDaCompleX'), None)
+        self.assertEqual(get(b'^^Hashes_Differently'), None)
 
     def test_get_default(self):
         get = self.reader.get
 
-        self.assertEqual(get('123456', 'default'), '1')
-        self.assertEqual(get('love', 'default'), '12')
-        self.assertEqual(get('!!KinDaCompleX', 'default'), 'default')
-        self.assertEqual(get('^^Hashes_Differently', 'default'), 'default')
+        self.assertEqual(get(b'123456', b'default'), b'1')
+        self.assertEqual(get(b'love', b'default'), b'12')
+        self.assertEqual(get(b'!!KinDaCompleX', b'default'), b'default')
+        self.assertEqual(get(b'^^Hashes_Differently', b'default'), b'default')
 
 
 class Reader64DictLikeTestCase(ReaderDictLikeTestCase):
@@ -133,81 +139,94 @@ class Reader64DictLikeTestCase(ReaderDictLikeTestCase):
     data_path = 'testdata/top250pws.cdb64'
 
 
-class ReaderNativeInterfaceTestBase:
+class ReaderNativeInterfaceTestBase(object):
     ARTS = (u'\N{SNOWMAN}', u'\N{CLOUD}', u'\N{UMBRELLA}')
     reader_cls = cdblib.Reader
     writer_cls = cdblib.Writer
 
     def setUp(self):
-        self.sio = sio = StringIO()
+        self.sio = sio = io.BytesIO()
         writer = self.writer_cls(sio, hashfn=self.HASHFN)
-        writer.puts('dave', (str(i) for i in xrange(10)))
-        writer.put('dave_no_dups', '1')
-        writer.put('dave_hex', '0x1a')
-        writer.putstrings('art', self.ARTS)
+        writer.puts(b'dave', [str(i).encode('ascii') for i in range(10)])
+        writer.put(b'dave_no_dups', b'1')
+        writer.put(b'dave_hex', b'0x1a')
+        writer.putstrings(b'art', self.ARTS)
         writer.finalize()
 
         sio.seek(0)
         self.reader = self.reader_cls(sio.getvalue(), hashfn=self.HASHFN)
 
     def test_insertion_order(self):
-        keys  = ['dave'] * 10
-        keys.append('dave_no_dups')
-        keys.append('dave_hex')
-        keys.extend('art' for art in self.ARTS)
+        keys  = [b'dave'] * 10
+        keys.append(b'dave_no_dups')
+        keys.append(b'dave_hex')
+        keys.extend(b'art' for art in self.ARTS)
         self.assertEqual(self.reader.keys(), keys)
 
     def test_get(self):
         # First get on a key should return its first inserted value.
-        self.assertEqual(self.reader.get('dave'), str(0))
-        self.assertEqual(self.reader.get('dave_no_dups'), '1')
+        self.assertEqual(self.reader.get(b'dave'), b'0')
+        self.assertEqual(self.reader.get(b'dave_no_dups'), b'1')
 
         # Default.
-        self.assertEqual(self.reader.get('junk', 'wad'), 'wad')
-        self.assertEqual(None, self.reader.get('junk'))
+        self.assertEqual(self.reader.get(b'junk', b'wad'), b'wad')
+        self.assertEqual(None, self.reader.get(b'junk'))
 
     def test__getitem__(self):
-        self.assertEqual(self.reader['dave'], str(0))
-        self.assertEqual(self.reader['dave_no_dups'], '1')
-        self.assertRaises(KeyError, lambda: self.reader['junk'])
+        self.assertEqual(self.reader[b'dave'], b'0')
+        self.assertEqual(self.reader[b'dave_no_dups'], b'1')
+        self.assertRaises(KeyError, lambda: self.reader[b'junk'])
 
     def test_gets(self):
-        self.assertEqual(list(self.reader.gets('dave')),
-                         map(str, range(10)))
-        self.assertEqual(list(self.reader.gets('dave_no_dups')),
-                         ['1'])
-        self.assertEqual(list(self.reader.gets('art')),
-                         [ s.encode('utf-8') for s in self.ARTS ])
-        self.assertEqual(list(self.reader.gets('junk')), [])
+        self.assertEqual(
+            list(self.reader.gets(b'dave')),
+            [str(i).encode('ascii') for i in range(10)],
+        )
+        self.assertEqual(
+            list(self.reader.gets(b'dave_no_dups')),
+            [b'1']
+        )
+        self.assertEqual(
+            list(self.reader.gets(b'art')),
+            [s.encode('utf-8') for s in self.ARTS ]
+        )
+        self.assertEqual(list(self.reader.gets(b'junk')), [])
 
     def test_getint(self):
-        self.assertEqual(self.reader.getint('dave'), 0)
-        self.assertEqual(self.reader.getint('dave_no_dups'), 1)
-        self.assertEqual(self.reader.getint('dave_hex', 16), 26)
-        self.assertRaises(ValueError, self.reader.getint, 'art')
+        self.assertEqual(self.reader.getint(b'dave'), 0)
+        self.assertEqual(self.reader.getint(b'dave_no_dups'), 1)
+        self.assertEqual(self.reader.getint(b'dave_hex', 16), 26)
+        self.assertRaises(ValueError, self.reader.getint, b'art')
 
-        self.assertEqual(self.reader.get('junk', 1), 1)
-        self.assertEqual(None, self.reader.getint('junk'))
+        self.assertEqual(self.reader.get(b'junk', 1), 1)
+        self.assertEqual(None, self.reader.getint(b'junk'))
 
     def test_getints(self):
-        self.assertEqual(list(self.reader.getints('dave')), range(10))
-        self.assertRaises(ValueError, list, self.reader.getints('art'))
+        self.assertEqual(
+            list(self.reader.getints(b'dave')),
+            list(range(10))
+        )
+        self.assertRaises(ValueError, list, self.reader.getints(b'art'))
 
-        self.assertEqual(list(self.reader.getints('junk')), [])
+        self.assertEqual(list(self.reader.getints(b'junk')), [])
 
     def test_getstring(self):
-        self.assertEqual(self.reader.getstring('art'), u'\N{SNOWMAN}')
-        self.assertEqual(type(self.reader.getstring('art')), unicode)
-        self.assertEqual(None, self.reader.getstring('junk'))
+        self.assertEqual(self.reader.getstring(b'art'), u'\N{SNOWMAN}')
+        self.assertEqual(type(self.reader.getstring(b'art')), six.text_type)
+        self.assertEqual(None, self.reader.getstring(b'junk'))
 
-        self.assertEqual(self.reader.getstring('junk', u'\N{COMET}'),
-                         u'\N{COMET}')
+        self.assertEqual(
+            self.reader.getstring(b'junk', u'\N{COMET}'),
+            u'\N{COMET}'
+        )
 
     def test_getstrings(self):
-        self.assertEqual(tuple(self.reader.getstrings('art')), self.ARTS)
-        self.assert_(all(type(s) is unicode
-                     for s in self.reader.getstrings('art')))
-        self.assertEqual(list(self.reader.getstrings('junk')), [])
+        art_strings = tuple(self.reader.getstrings(b'art'))
+        self.assertEqual(art_strings, self.ARTS)
+        self.assertTrue(
+            all(type(s) is six.text_type for s in art_strings)
+        )
+        self.assertEqual(list(self.reader.getstrings(b'junk')), [])
 
 
 class ReaderNativeInterfaceDjbHashTestCase(ReaderNativeInterfaceTestBase,
@@ -248,12 +267,12 @@ class Reader64NativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
     HASHFN = staticmethod(lambda s: 1)
 
 
-class WriterNativeInterfaceTestBase:
+class WriterNativeInterfaceTestBase(object):
     reader_cls = cdblib.Reader
     writer_cls = cdblib.Writer
 
     def setUp(self):
-        self.sio = sio = StringIO()
+        self.sio = sio = io.BytesIO()
         self.writer = self.writer_cls(sio, hashfn=self.HASHFN)
 
     def get_reader(self):
@@ -264,67 +283,70 @@ class WriterNativeInterfaceTestBase:
         return partial(self.assertRaises, Exception, method)
 
     def test_put(self):
-        self.writer.put('dave', 'dave')
-        self.assertEqual(self.get_reader().get('dave'), 'dave')
+        self.writer.put(b'dave', b'dave')
+        self.assertEqual(self.get_reader().get(b'dave'), b'dave')
 
         # Don't care about rich error, just as long as it crashes.
         bad = self.make_bad(self.writer.put)
-        bad('dave', u'dave')
-        bad(u'dave', 'dave')
-        bad('dave', 123)
-        bad(123, 'dave')
+        bad(b'dave', u'dave')
+        bad(u'dave', b'dave')
+        bad(b'dave', 123)
+        bad(123, b'dave')
 
     def test_puts(self):
-        lst = 'dave dave dave'.split()
+        lst = b'dave dave dave'.split()
 
-        self.writer.puts('dave', lst)
-        self.assertEqual(list(self.get_reader().gets('dave')), lst)
+        self.writer.puts(b'dave', lst)
+        self.assertEqual(list(self.get_reader().gets(b'dave')), lst)
 
         bad = self.make_bad(self.writer.puts)
-        bad('dave', map(unicode, lst))
+        bad('dave', map(six.text_type, lst))
         bad(u'dave', lst)
-        bad('dave', (123,))
+        bad(b'dave', (123,))
         bad(123, lst)
 
     def test_putint(self):
-        self.writer.putint('dave', 26)
-        self.writer.putint('dave2', 26<<32)
+        self.writer.putint(b'dave', 26)
+        self.writer.putint(b'dave2', 26 << 32)
 
         reader = self.get_reader()
-        self.assertEqual(reader.getint('dave'), 26)
-        self.assertEqual(reader.getint('dave2'), 26<<32)
+        self.assertEqual(reader.getint(b'dave'), 26)
+        self.assertEqual(reader.getint(b'dave2'), 26 << 32)
 
         bad = self.make_bad(self.writer.putint)
         bad(True)
-        bad('dave')
+        bad(b'dave')
         bad(None)
 
     def test_putints(self):
-        self.writer.putints('dave', range(10))
-        self.assertEqual(list(self.get_reader().getints('dave')), range(10))
+        self.writer.putints(b'dave', range(10))
+        self.assertEqual(
+            list(self.get_reader().getints(b'dave')),
+            list(range(10))
+        )
 
         bad = self.make_bad(self.writer.putints)
         bad((True, False))
-        bad('dave')
+        bad(b'dave')
         bad(u'dave')
 
     def test_putstring(self):
-        self.writer.putstring('dave', u'dave')
-        self.assertEqual(self.get_reader().getstring('dave'), u'dave')
+        self.writer.putstring(b'dave', u'dave')
+        self.assertEqual(self.get_reader().getstring(b'dave'), u'dave')
 
         bad = self.make_bad(self.writer.putstring)
-        bad('dave')
+        bad(b'dave')
         bad(123)
         bad(None)
 
     def test_putstrings(self):
         lst = [u'zark', u'quark']
-        self.writer.putstrings('dave', lst)
-        self.assertEqual(list(self.get_reader().getstrings('dave')), lst)
+        self.writer.putstrings(b'dave', lst)
+        self.assertEqual(list(self.get_reader().getstrings(b'dave')), lst)
 
         bad = self.make_bad(self.writer.putstrings)
-        bad('dave', range(10))
-        bad('dave', map(str, lst))
+        bad(b'dave', range(10))
+        bad(b'dave', map(str, lst))
 
 
 class WriterNativeInterfaceDjbHashTestCase(WriterNativeInterfaceTestBase,
@@ -363,7 +385,7 @@ class WriterNativeInterfaceNullHashTestCase(WriterNativeInterfaceTestBase,
     HASHFN = staticmethod(lambda s: 1)
 
 
-class WriterKnownGoodTestBase:
+class WriterKnownGoodTestBase(object):
     reader_cls = cdblib.Reader
     writer_cls = cdblib.Writer
 
@@ -371,7 +393,7 @@ class WriterKnownGoodTestBase:
     pwdump_path = 'testdata/pwdump.cdb'
 
     def setUp(self):
-        self.sio = StringIO()
+        self.sio = io.BytesIO()
         self.writer = self.writer_cls(self.sio, hashfn=self.HASHFN)
 
     def get_md5(self):
@@ -382,15 +404,18 @@ class WriterKnownGoodTestBase:
         self.assertEqual(self.get_md5(), self.EMPTY_MD5)
 
     def test_single_rec(self):
-        self.writer.put('dave', 'dave')
+        self.writer.put(b'dave', b'dave')
         self.assertEqual(self.get_md5(), self.SINGLE_REC_MD5)
 
     def test_dup_keys(self):
-        self.writer.puts('dave', ('dave', 'dave'))
+        self.writer.puts(b'dave', (b'dave', b'dave'))
         self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
 
     def get_iteritems(self, filename):
-        reader = self.reader_cls(open(filename, 'rb').read(), hashfn=self.HASHFN)
+        with io.open(filename, 'rb') as infile:
+            data = infile.read()
+
+        reader = self.reader_cls(data, hashfn=self.HASHFN)
         return reader.iteritems()
 
     def test_known_good_top250(self):
@@ -430,6 +455,7 @@ class Writer64KnownGoodDjbHashTestCase(WriterKnownGoodTestBase,
     PWDUMP_MD5 = '3b1b4964294897c6ca119a6c6ae0094f'
 
 
+@unittest.skipIf(six.PY3, 'Python 3.3+ use random hash seeds')
 class WriterKnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
                                         unittest.TestCase):
     HASHFN = staticmethod(hash)
@@ -441,6 +467,7 @@ class WriterKnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
     PWDUMP_MD5 = 'd5726fc195460c9eef3117111975532f'
 
 
+@unittest.skipIf(six.PY3, 'Python 3.3+ use random hash seeds')
 class Writer64KnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
                                           unittest.TestCase):
     HASHFN = staticmethod(hash)

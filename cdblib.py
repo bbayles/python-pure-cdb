@@ -5,17 +5,29 @@ that efficiently handle many keys, while remaining space-efficient.
     http://cr.yp.to/cdb.html
 
 '''
+from __future__ import unicode_literals
 
-from _struct import Struct
+from struct import Struct
 from itertools import chain
 
+import six
+from six.moves import range
 
-def py_djb_hash(s):
-    '''Return the value of DJB's hash function for the given 8-bit string.'''
-    h = 5381
-    for c in s:
-        h = (((h << 5) + h) ^ ord(c)) & 0xffffffff
-    return h
+
+if six.PY2:
+    def py_djb_hash(s):
+        '''Return the value of DJB's hash function for the given byte string.'''
+        h = 5381
+        for c in s:
+            h = (((h << 5) + h) ^ ord(c)) & 0xffffffff
+        return h
+else:
+    def py_djb_hash(s):
+        '''Return the value of DJB's hash function for the given byte string.'''
+        h = 5381
+        for c in s:
+            h = (((h << 5) + h) ^ c) & 0xffffffff
+        return h
 
 try:
     from _cdblib import djb_hash
@@ -44,7 +56,7 @@ class Reader(object):
         self.data = data
         self.hashfn = hashfn
         self.index = [self.read_pair(data[i:i+self.pair_size])
-                      for i in xrange(0, 256*self.pair_size, self.pair_size)]
+                      for i in range(0, 256*self.pair_size, self.pair_size)]
         self.table_start = min(p[0] for p in self.index)
         # Assume load load factor is 0.5 like official CDB.
         self.length = sum(p[1] >> 1 for p in self.index)
@@ -111,8 +123,8 @@ class Reader(object):
             end = start + (nslots * self.pair_size)
             slot_off = start + (((h >> 8) % nslots) * self.pair_size)
 
-            for pos in chain(xrange(slot_off, end, self.pair_size),
-                             xrange(start, slot_off, self.pair_size)):
+            for pos in chain(range(slot_off, end, self.pair_size),
+                             range(start, slot_off, self.pair_size)):
                 rec_h, rec_pos = self.read_pair(
                     self.data[pos:pos+self.pair_size]
                 )
@@ -132,7 +144,7 @@ class Reader(object):
     def get(self, key, default=None):
         '''Get the first value for key, returning default if missing.'''
         # Avoid exception catch when handling default case; much faster.
-        return chain(self.gets(key), (default,)).next()
+        return next(chain(self.gets(key), (default,)))
 
     def getint(self, key, default=None, base=0):
         '''Get the first value for key converted it to an int, returning
@@ -182,12 +194,12 @@ class Writer(object):
         self.fp = fp
         self.hashfn = hashfn
 
-        fp.write('\x00' * (256 * self.pair_size))
-        self._unordered = [[] for i in xrange(256)]
+        fp.write(b'\x00' * (256 * self.pair_size))
+        self._unordered = [[] for i in range(256)]
 
-    def put(self, key, value=''):
+    def put(self, key, value=b''):
         '''Write a string key/value pair to the output file.'''
-        assert type(key) is str and type(value) is str
+        assert type(key) is six.binary_type and type(value) is six.binary_type
 
         pos = self.fp.tell()
         self.fp.write(self.write_pair(len(key), len(value)))
@@ -206,22 +218,22 @@ class Writer(object):
     def putint(self, key, value):
         '''Write an integer as a base-10 string associated with the given key
         to the output file.'''
-        self.put(key, str(value))
+        self.put(key, str(value).encode('ascii'))
 
     def putints(self, key, values):
         '''Write zero or more integers for the same key to the output file.
         Equivalent to calling putint() in a loop.'''
-        self.puts(key, (str(value) for value in values))
+        self.puts(key, (str(value).encode('ascii') for value in values))
 
     def putstring(self, key, value, encoding='utf-8'):
         '''Write a unicode string associated with the given key to the output
         file after encoding it as UTF-8 or the given encoding.'''
-        self.put(key, unicode.encode(value, encoding))
+        self.put(key, six.text_type.encode(value, encoding))
 
     def putstrings(self, key, values, encoding='utf-8'):
         '''Write zero or more unicode strings to the output file. Equivalent to
         calling putstring() in a loop.'''
-        self.puts(key, (unicode.encode(value, encoding) for value in values))
+        self.puts(key, (six.text_type.encode(value, encoding) for value in values))
 
     def finalize(self):
         '''Write the final hash tables to the output file, and write out its
@@ -232,7 +244,7 @@ class Writer(object):
             ordered = [(0, 0)] * length
             for pair in tbl:
                 where = (pair[0] >> 8) % length
-                for i in chain(xrange(where, length), xrange(0, where)):
+                for i in chain(range(where, length), range(0, where)):
                     if not ordered[i][0]:
                         ordered[i] = pair
                         break
