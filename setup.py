@@ -26,8 +26,8 @@ setup(
     ext_modules=ext_modules,
     install_requires=['six>=1.0.0,<2.0.0'],
     test_suite='tests',
-    tests_require=['flake8']
+    tests_require=['flake8'],
     entry_points={
         'console_scripts': ['python-pure-cdbmake=cdblib.cdbmake:main'],
-    }
+    },
 )
