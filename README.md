@@ -1,10 +1,50 @@
-Manipulate DJB's Constant Database files. These are 2 level disk-based hash tables that efficiently handle thousands of keys, while remaining space-efficient.
+## Introduction
 
-http://cr.yp.to/cdb.html
+`python-pure-cdb` (`pure-cdb` on [PyPI](https://pypi.org/project/pure-cdb/)) is a Python library for reading and writing djb's "constant database" files. These disk-based associative arrays that allow efficient storage and retrieval of thousands of keys. For more information on `cdb`, see [djb's page](https://cr.yp.to/cdb.html) and [Wikipedia](https://en.wikipedia.org/wiki/Cdb_(software)). 
 
-Note the Reader class reads the entire CDB into memory.
+### Installation and usage
 
-------
+Install `pure-cdb` with `pip`:
+
+```
+pip install pure-cdb
+```
+
+Then import `cdblib` to access the `Reader` and `Writer` classes.
+
+---
+
+`Reader` provides an interface to a `cdb` file's contents - use the `.iterkeys()` method to iterate over keys, and the `.get()` method to retrieve a key's value.
+
+```python
+import cdblib
+
+with open('info.cdb', 'rb') as f:
+    data = f.read()
+
+reader = cdblib.Reader(data)
+
+reader.get(b'hello')
+```
+
+All keys are `bytes` objects (`str` in Python 2). By default all values are also retrieved as `bytes` objects, but the `.getstring()` and `.getint()` methods can be used to retrieve decoded strings and integers, respectively.
+
+---
+
+`Writer` allows for creating new `cdb` files. Use the `.put()` method to insert a key / value pair, and the `.finalize()` method to create the CDB structure.
+
+```python
+with open('/home/bo/Desktop/new.cdb', 'wb') as f:
+    writer = cdblib.Writer(f)
+    writer.put(b'key', b'value')
+    writer.finalize()
+```
+
+As with the `Reader` class, keys and values are `bytes` objects. The `.putstrings()` and `.putint()` methods can be used to insert encoded text data and integers, respectively.
+
+---
+
+### Remarks on usage
 
 Constant databases have the desirable property of requiring low overhead to open. This makes them ideal for use in environments where it's not always possible to have data hanging around in RAM awaiting use, for example in a CGI script or Google App Engine.
 
