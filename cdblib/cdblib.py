@@ -13,8 +13,6 @@ from itertools import chain
 import six
 from six.moves import range
 
-__all__ = ['djb_hash', 'Reader', 'Reader64', 'Writer', 'Writer64']
-
 
 if six.PY2:
     def py_djb_hash(s):
