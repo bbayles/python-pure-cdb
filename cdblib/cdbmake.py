@@ -107,14 +107,15 @@ class CdbMake(object):
             self.die(fmt, *args)
         raise SystemExit(0)
 
-    @classmethod
-    def main(cls, args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
-        self = cls(stdin, stdout, stderr)
-        self.parse_args(args)
-        self.begin()
-        self.parse_input()
-        self.end()
+
+def main(args=None, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
+    args = sys.argv[1:] if (args is None) else args
+    self = CdbMake(stdin, stdout, stderr)
+    self.parse_args(args)
+    self.begin()
+    self.parse_input()
+    self.end()
 
 
 if __name__ == '__main__':
-   CdbMake.main(sys.argv[1:])
+   main(sys.argv[1:])

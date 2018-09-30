@@ -25,5 +25,8 @@ setup(
     ext_modules=ext_modules,
     install_requires=['six>=1.0.0,<2.0.0'],
     test_suite='tests',
-    version='2.0.0'
+    version='2.0.0',
+    entry_points = {
+        'console_scripts': ['python-pure-cdbmake=cdblib.cdbmake:main'],
+    }
 )
