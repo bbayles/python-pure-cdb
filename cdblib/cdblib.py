@@ -30,9 +30,10 @@ else:
         return h
 
 try:
-    from _cdblib import djb_hash
+    from ._cdblib import djb_hash
 except ImportError:
     djb_hash = py_djb_hash
+
 
 read_2_le4 = Struct('<LL').unpack
 read_2_le8 = Struct('<QQ').unpack
