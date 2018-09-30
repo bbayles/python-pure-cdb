@@ -28,7 +28,7 @@ static /*const*/ PyMethodDef methods[] = {
 
 
 PyMODINIT_FUNC
-init_cdblib(void)
+init_djb_hash(void)
 {
-    Py_InitModule("_cdblib", methods);
+    Py_InitModule("_djb_hash", methods);
 }
