@@ -35,7 +35,7 @@ class CdbMake(object):
     def parse_args(self, args):
         try:
             opts, args = getopt.gnu_getopt(args, 'p8')
-        except getopt.error as  e:
+        except getopt.error as e:
             self.usage(str(e))
 
         for opt, arg in opts:
@@ -67,11 +67,10 @@ class CdbMake(object):
             elif plus != '+':
                 self.die('bad or missing plus, line/record #%d', rec_nr)
 
-            bad = False
             try:
                 klen = int(''.join(iter(partial(read, 1), ',')), 10)
                 dlen = int(''.join(iter(partial(read, 1), ':')), 10)
-            except ValueError as e:
+            except ValueError:
                 self.die('bad or missing length, line/record #%d', rec_nr)
 
             key = read(klen)
@@ -118,4 +117,4 @@ def main(args=None, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
 
 
 if __name__ == '__main__':
-   main(sys.argv[1:])
+    main(sys.argv[1:])
