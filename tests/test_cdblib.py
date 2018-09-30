@@ -6,10 +6,15 @@ import io
 import unittest
 
 from functools import partial
+from os.path import abspath, dirname, join
 
 import six
 
 import cdblib
+
+
+def testdata_path(file_name):
+    return join(dirname(abspath(__file__)), 'testdata', file_name)
 
 
 class DjbHashTestCase(unittest.TestCase):
@@ -23,9 +28,9 @@ class DjbHashTestCase(unittest.TestCase):
 
 class ReaderKnownGoodTestCase(unittest.TestCase):
     reader_cls = cdblib.Reader
-    pwdump_path = 'testdata/pwdump.cdb'
+    pwdump_path = testdata_path('pwdump.cdb')
     pwdump_md5 = '84d38c5b6b5bb01bb374b2f7af0129b1'
-    top250_path = 'testdata/top250pws.cdb'
+    top250_path = testdata_path('top250pws.cdb')
     top250_md5 = '0564adfe4667506a326ba2f363415616'
 
     def reader_to_cdbmake_md5(self, filename):
@@ -51,13 +56,13 @@ class ReaderKnownGoodTestCase(unittest.TestCase):
 
 class Reader64KnownGoodTestCase(ReaderKnownGoodTestCase):
     reader_cls = cdblib.Reader64
-    pwdump_path = 'testdata/pwdump.cdb64'
-    top250_path = 'testdata/top250pws.cdb64'
+    pwdump_path = testdata_path('pwdump.cdb64')
+    top250_path = testdata_path('top250pws.cdb64')
 
 
 class ReaderDictLikeTestCase(unittest.TestCase):
     reader_cls = cdblib.Reader
-    data_path = 'testdata/top250pws.cdb'
+    data_path = testdata_path('top250pws.cdb')
 
     def setUp(self):
         with io.open(self.data_path, 'rb') as infile:
@@ -136,7 +141,7 @@ class ReaderDictLikeTestCase(unittest.TestCase):
 
 class Reader64DictLikeTestCase(ReaderDictLikeTestCase):
     reader_cls = cdblib.Reader64
-    data_path = 'testdata/top250pws.cdb64'
+    data_path = testdata_path('top250pws.cdb64')
 
 
 class ReaderNativeInterfaceTestBase(object):
@@ -389,8 +394,8 @@ class WriterKnownGoodTestBase(object):
     reader_cls = cdblib.Reader
     writer_cls = cdblib.Writer
 
-    top250_path = 'testdata/top250pws.cdb'
-    pwdump_path = 'testdata/pwdump.cdb'
+    top250_path = testdata_path('top250pws.cdb')
+    pwdump_path = testdata_path('pwdump.cdb')
 
     def setUp(self):
         self.sio = io.BytesIO()
@@ -445,8 +450,8 @@ class Writer64KnownGoodDjbHashTestCase(WriterKnownGoodTestBase,
     HASHFN = staticmethod(cdblib.djb_hash)
     reader_cls = cdblib.Reader64
     writer_cls = cdblib.Writer64
-    top250_path = 'testdata/top250pws.cdb64'
-    pwdump_path = 'testdata/pwdump.cdb64'
+    top250_path = testdata_path('top250pws.cdb64')
+    pwdump_path = testdata_path('pwdump.cdb64')
 
     EMPTY_MD5 = 'c43c406a037989703e0d58ed9f17ba3c'
     SINGLE_REC_MD5 = '276ae8223f730b1e67007641db6b69ca'
@@ -473,8 +478,8 @@ class Writer64KnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
     HASHFN = staticmethod(hash)
     reader_cls = cdblib.Reader64
     writer_cls = cdblib.Writer64
-    top250_path = 'testdata/top250pws.cdb64'
-    pwdump_path = 'testdata/pwdump.cdb64'
+    top250_path = testdata_path('top250pws.cdb64')
+    pwdump_path = testdata_path('pwdump.cdb64')
 
     EMPTY_MD5 = 'c43c406a037989703e0d58ed9f17ba3c'
     SINGLE_REC_MD5 = 'fdd4a8c055d2000cba9b712ceb8a1eba'
@@ -499,8 +504,8 @@ class Writer64KnownGoodNullHashTestCase(WriterKnownGoodTestBase,
     HASHFN = staticmethod(lambda s: 1)
     reader_cls = cdblib.Reader64
     writer_cls = cdblib.Writer64
-    top250_path = 'testdata/top250pws.cdb64'
-    pwdump_path = 'testdata/pwdump.cdb64'
+    top250_path = testdata_path('top250pws.cdb64')
+    pwdump_path = testdata_path('pwdump.cdb64')
 
     EMPTY_MD5 = 'c43c406a037989703e0d58ed9f17ba3c'
     SINGLE_REC_MD5 = '91f0614d6ec48e720138d6e962062166'

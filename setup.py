@@ -1,17 +1,32 @@
 #!/usr/bin/env python
+from os import environ
+from sys import version_info
 
-from distutils.core import setup, Extension
+from setuptools import Extension, find_packages, setup
 
-_cdblib_module = Extension('_cdblib', sources=['_cdblib.c'])
+# Opt-in to building the C extensions for Python 2 by setting the
+# ENABLE_DJB_HASH_CEXT environment variable
+if (version_info[0] == 2) and environ.get('ENABLE_DJB_HASH_CEXT'):
+    ext_modules = [
+        Extension('cdblib._djb_hash', sources=['cdblib/_djb_hash.c']),
+    ]
+else:
+    ext_modules = []
 
-setup(author='David Wilson',
-      author_email='dw@botanicus.net',
-      description="Pure Python reader/writer for Dan J. Berstein's CDB format.",
-      download_url='https://github.com/dw/python-pure-cdb',
-      keywords='cdb file format appengine database db',
-      license='MIT',
-      name='pure-cdb',
-      py_modules=['cdblib'],
-      ext_modules=[_cdblib_module],
-      version='2.0.0'
+setup(
+    author='David Wilson',
+    author_email='dw@botanicus.net',
+    description="Pure Python reader/writer for Dan J. Berstein's CDB format.",
+    download_url='https://github.com/dw/python-pure-cdb',
+    keywords='cdb file format appengine database db',
+    license='MIT',
+    name='pure-cdb',
+    packages=find_packages(include=['cdblib']),
+    ext_modules=ext_modules,
+    install_requires=['six>=1.0.0,<2.0.0'],
+    test_suite='tests',
+    version='2.0.0',
+    entry_points = {
+        'console_scripts': ['python-pure-cdbmake=cdblib.cdbmake:main'],
+    }
 )

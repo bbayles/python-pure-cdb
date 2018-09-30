@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''Python version of DJB's cdbmake, optionally supporting Python's hash().
 
 Usage:
@@ -12,8 +11,10 @@ Where:
     tmp     Temporary file to use during write. Atomically replaces output at
             end.
 '''
+from __future__ import print_function
 
 import getopt
+import io
 import os
 import sys
 
@@ -29,11 +30,12 @@ class CdbMake(object):
         self.stderr = stderr
         self.python_hash = False
         self.writer_cls = cdblib.Writer
+        self.encoding = sys.getdefaultencoding()
 
     def parse_args(self, args):
         try:
             opts, args = getopt.gnu_getopt(args, 'p8')
-        except getopt.error, e:
+        except getopt.error as  e:
             self.usage(str(e))
 
         for opt, arg in opts:
@@ -50,7 +52,7 @@ class CdbMake(object):
 
     def begin(self):
         hash_func = hash if self.python_hash else cdblib.djb_hash
-        self.fp = file(self.tmp_filename, 'wb')
+        self.fp = io.open(self.tmp_filename, 'wb')
         self.writer = self.writer_cls(self.fp, hash_func)
 
     def parse_input(self):
@@ -69,7 +71,7 @@ class CdbMake(object):
             try:
                 klen = int(''.join(iter(partial(read, 1), ',')), 10)
                 dlen = int(''.join(iter(partial(read, 1), ':')), 10)
-            except ValueError, e:
+            except ValueError as e:
                 self.die('bad or missing length, line/record #%d', rec_nr)
 
             key = read(klen)
@@ -83,7 +85,9 @@ class CdbMake(object):
             if read(1) != '\n':
                 self.die('bad line ending, line/record #%d', rec_nr)
 
-            self.writer.put(key, data)
+            self.writer.put(
+                key.encode(self.encoding), data.encode(self.encoding)
+            )
 
     def end(self):
         self.writer.finalize()
@@ -98,19 +102,20 @@ class CdbMake(object):
         raise SystemExit(1)
 
     def usage(self, fmt, *args):
-        print __doc__
+        print(__doc__)
         if fmt:
             self.die(fmt, *args)
         raise SystemExit(0)
 
-    @classmethod
-    def main(cls, args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
-        self = cls(stdin, stdout, stderr)
-        self.parse_args(args)
-        self.begin()
-        self.parse_input()
-        self.end()
+
+def main(args=None, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
+    args = sys.argv[1:] if (args is None) else args
+    self = CdbMake(stdin, stdout, stderr)
+    self.parse_args(args)
+    self.begin()
+    self.parse_input()
+    self.end()
 
 
 if __name__ == '__main__':
-   CdbMake.main(sys.argv[1:])
+   main(sys.argv[1:])

@@ -13,26 +13,8 @@ from itertools import chain
 import six
 from six.moves import range
 
+from .djb_hash import djb_hash
 
-if six.PY2:
-    def py_djb_hash(s):
-        '''Return the value of DJB's hash function for the given byte string.'''
-        h = 5381
-        for c in s:
-            h = (((h << 5) + h) ^ ord(c)) & 0xffffffff
-        return h
-else:
-    def py_djb_hash(s):
-        '''Return the value of DJB's hash function for the given byte string.'''
-        h = 5381
-        for c in s:
-            h = (((h << 5) + h) ^ c) & 0xffffffff
-        return h
-
-try:
-    from _cdblib import djb_hash
-except ImportError:
-    djb_hash = py_djb_hash
 
 read_2_le4 = Struct('<LL').unpack
 read_2_le8 = Struct('<QQ').unpack
