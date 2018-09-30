@@ -40,7 +40,14 @@ class ReaderKnownGoodTestCase(unittest.TestCase):
             data = infile.read()
 
         for key, value in self.reader_cls(data).iteritems():
-            md5.update(b'+%d,%d:%s->%s\n' % (len(key), len(value), key, value))
+            # Hack to work around lack of bytes.format() in Python 3.4
+            data = '+{},{}:{}->{}\n'.format(
+                len(key),
+                len(value),
+                key.decode('utf-8'),
+                value.decode('utf-8')
+            )
+            md5.update(data.encode('utf-8'))
 
         md5.update(b'\n')
 
