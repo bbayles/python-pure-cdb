@@ -14,6 +14,7 @@ setup(
     name='pure-cdb',
     packages=find_packages(include=['cdblib']),
     ext_modules=[_cdblib_module],
+    install_requires=['six>=1.0.0,<2.0.0'],
     test_suite='tests',
     version='2.0.0'
 )
