@@ -11,11 +11,14 @@ python:
 
 install:
     - "pip install ."
-    - "pip install -U flake8"
+    - "pip install -U coveralls flake8"
 
 script:
-    - "python setup.py test"
+    - "coverage run --include='cdblib/*.py' setup.py test"
     - "flake8 ."
 
 notifications:
     - email: false
+
+after_success:
+    - "coveralls"
