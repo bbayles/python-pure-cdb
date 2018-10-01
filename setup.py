@@ -12,10 +12,14 @@ if environ.get('ENABLE_DJB_HASH_CEXT'):
 else:
     ext_modules = []
 
+
+description = "Pure Python reader/writer for Dan J. Berstein's CDB format."
+
 setup(
     author='David Wilson',
     author_email='dw@botanicus.net',
-    description="Pure Python reader/writer for Dan J. Berstein's CDB format.",
+    description=description,
+    long_description=description,
     download_url='https://github.com/dw/python-pure-cdb',
     keywords='cdb file format appengine database db',
     license='MIT',
