@@ -215,7 +215,7 @@ class Writer(object):
     def putstrings(self, key, values, encoding='utf-8'):
         '''Write zero or more unicode strings to the output file. Equivalent to
         calling putstring() in a loop.'''
-        self.puts(key, (six.text_type.encode(value, encoding) for value in values))
+        self.puts(key, (six.text_type.encode(v, encoding) for v in values))
 
     def finalize(self):
         '''Write the final hash tables to the output file, and write out its
@@ -238,7 +238,7 @@ class Writer(object):
         self.fp.seek(0)
         for pair in index:
             self.fp.write(self.write_pair(*pair))
-        self.fp = None # prevent double finalize()
+        self.fp = None  # prevent double finalize()
 
 
 class Writer64(Writer):

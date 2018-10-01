@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from os import environ
-from sys import version_info
 
 from setuptools import Extension, find_packages, setup
 
@@ -13,20 +12,25 @@ if environ.get('ENABLE_DJB_HASH_CEXT'):
 else:
     ext_modules = []
 
+
+description = "Pure Python reader/writer for Dan J. Berstein's CDB format."
+
 setup(
     author='David Wilson',
     author_email='dw@botanicus.net',
-    description="Pure Python reader/writer for Dan J. Berstein's CDB format.",
+    description=description,
+    long_description=description,
     download_url='https://github.com/dw/python-pure-cdb',
     keywords='cdb file format appengine database db',
     license='MIT',
     name='pure-cdb',
+    version='2.1.0',
     packages=find_packages(include=['cdblib']),
     ext_modules=ext_modules,
     install_requires=['six>=1.0.0,<2.0.0'],
     test_suite='tests',
-    version='2.1.0',
-    entry_points = {
+    tests_require=['flake8'],
+    entry_points={
         'console_scripts': ['python-pure-cdbmake=cdblib.cdbmake:main'],
-    }
+    },
 )
