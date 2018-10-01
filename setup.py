@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from os import environ
-from sys import version_info
 
 from setuptools import Extension, find_packages, setup
 
