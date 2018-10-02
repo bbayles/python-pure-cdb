@@ -31,6 +31,9 @@ setup(
     test_suite='tests',
     tests_require=['flake8'],
     entry_points={
-        'console_scripts': ['python-pure-cdbmake=cdblib.cdbmake:main'],
+        'console_scripts': [
+            'python-pure-cdbmake=cdblib.cdbmake:main',
+            'python-pure-cdbdump=cdblib.cdbdump:main',
+        ],
     },
 )
