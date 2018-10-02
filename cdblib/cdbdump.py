@@ -15,8 +15,9 @@ def cdbdump(parsed_args, **kwargs):
         stdin = sys.stdin if six.PY2 else sys.stdin.buffer
 
     # Print text data to stdout by default
-    stdout = kwargs.get('stdout', sys.stdout)
-    encoding = kwargs.get('encoding', sys.getdefaultencoding())
+    stdout = kwargs.get('stdout')
+    if stdout is None:
+        stdout = sys.stdout if six.PY2 else sys.stdout.buffer
 
     # Consume stdin and parse the cdb file
     reader_cls = cdblib.Reader64 if vars(parsed_args)['64'] else cdblib.Reader
@@ -25,16 +26,21 @@ def cdbdump(parsed_args, **kwargs):
 
     # Dump the file's contents to the ouput stream
     for key, value in reader.iteritems():
-        item = '+{:d},{:d}:{:s}->{:s}'.format(
-            len(key),
-            len(value),
-            key.decode(encoding),
-            value.decode(encoding)
+        item = (
+            b'+',
+            str(len(key)).encode('ascii'),
+            b',',
+            str(len(value)).encode('ascii'),
+            b':',
+            key,
+            b'->',
+            value,
+            b'\n',
         )
-        print(item, file=stdout)
+        stdout.write(b''.join(item))
 
     # Print final newline
-    print()
+    stdout.write(b'\n')
 
 
 def main(args=None):
