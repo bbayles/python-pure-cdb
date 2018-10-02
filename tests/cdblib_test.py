@@ -419,6 +419,18 @@ class WriterKnownGoodTestBase(object):
         self.writer.put(b'dave', b'dave')
         self.assertEqual(self.get_md5(), self.SINGLE_REC_MD5)
 
+    def test_context_manager_recovery(self):
+        # The context manager should finalize the file even if there's an error
+        # while it's open
+        with io.BytesIO() as f:
+            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+                writer.put(b'dave', b'dave')
+                self.assertRaises(Exception, lambda: self.writer.put, 1)
+
+            self.assertEqual(
+                hashlib.md5(f.getvalue()).hexdigest(), self.SINGLE_REC_MD5
+            )
+
     def test_dup_keys(self):
         self.writer.puts(b'dave', (b'dave', b'dave'))
         self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
