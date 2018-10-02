@@ -7,6 +7,7 @@ import unittest
 
 from functools import partial
 from os.path import abspath, dirname, join
+from zlib import adler32
 
 import six
 
@@ -267,6 +268,20 @@ class Reader64NativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
     HASHFN = staticmethod(lambda s: 1)
 
 
+class ReaderNativeInterfaceAltHashTestCase(ReaderNativeInterfaceTestBase,
+                                           unittest.TestCase):
+    # Use the adler32 checksum as a "hash"
+    HASHFN = staticmethod(lambda s: adler32(s) & 0xffffffff)
+
+
+class Reader64NativeInterfaceAltHashTestCase(ReaderNativeInterfaceTestBase,
+                                             unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
+    # Use the adler32 checksum as a "hash"
+    HASHFN = staticmethod(lambda s: adler32(s) & 0xffffffff)
+
+
 class WriterNativeInterfaceTestBase(object):
     reader_cls = cdblib.Reader
     writer_cls = cdblib.Writer
@@ -371,6 +386,18 @@ class WriterNativeInterfaceNullHashTestCase(WriterNativeInterfaceTestBase,
     reader_cls = cdblib.Reader64
     writer_cls = cdblib.Writer64
     HASHFN = staticmethod(lambda s: 1)
+
+
+class WriterNativeInterfaceAltHashTestCase(WriterNativeInterfaceTestBase,
+                                           unittest.TestCase):
+    HASHFN = staticmethod(lambda s: adler32(s) & 0xffffffff)
+
+
+class WriterNativeInterfaceAltHashTestCase(WriterNativeInterfaceTestBase,
+                                           unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
+    HASHFN = staticmethod(lambda s: adler32(s) & 0xffffffff)
 
 
 class WriterKnownGoodTestBase(object):
