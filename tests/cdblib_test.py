@@ -435,10 +435,30 @@ class WriterKnownGoodTestBase(object):
             self.writer.put(key, value)
         self.assertEqual(self.get_md5(), self.TOP250PWS_MD5)
 
+    def test_known_good_top250_context_manager(self):
+        with io.BytesIO() as f:
+            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+                for key, value in self.get_iteritems(self.top250_path):
+                    writer.put(key, value)
+
+            self.assertEqual(
+                hashlib.md5(f.getvalue()).hexdigest(), self.TOP250PWS_MD5
+            )
+
     def test_known_good_pwdump(self):
         for key, value in self.get_iteritems(self.pwdump_path):
             self.writer.put(key, value)
         self.assertEqual(self.get_md5(), self.PWDUMP_MD5)
+
+    def test_known_good_pwdump_context_manager(self):
+        with io.BytesIO() as f:
+            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+                for key, value in self.get_iteritems(self.pwdump_path):
+                    writer.put(key, value)
+
+            self.assertEqual(
+                hashlib.md5(f.getvalue()).hexdigest(), self.PWDUMP_MD5
+            )
 
 
 class WriterKnownGoodDjbHashTestCase(WriterKnownGoodTestBase,
