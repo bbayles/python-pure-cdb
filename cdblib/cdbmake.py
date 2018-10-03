@@ -20,6 +20,8 @@ import sys
 
 from functools import partial
 
+import six
+
 import cdblib
 
 
@@ -30,7 +32,6 @@ class CdbMake(object):
         self.stderr = stderr
         self.python_hash = False
         self.writer_cls = cdblib.Writer
-        self.encoding = sys.getdefaultencoding()
 
     def parse_args(self, args):
         try:
@@ -62,31 +63,29 @@ class CdbMake(object):
         while True:
             rec_nr += 1
             plus = read(1)
-            if plus == '\n':
+            if plus == b'\n':
                 return
-            elif plus != '+':
+            elif plus != b'+':
                 self.die('bad or missing plus, line/record #%d', rec_nr)
 
             try:
-                klen = int(''.join(iter(partial(read, 1), ',')), 10)
-                dlen = int(''.join(iter(partial(read, 1), ':')), 10)
+                klen = int(b''.join(iter(partial(read, 1), b',')), 10)
+                dlen = int(b''.join(iter(partial(read, 1), b':')), 10)
             except ValueError:
                 self.die('bad or missing length, line/record #%d', rec_nr)
 
             key = read(klen)
-            if read(2) != '->':
+            if read(2) != b'->':
                 self.die('bad or missing separator, line/record #%d', rec_nr)
 
             data = read(dlen)
             if (len(key) + len(data)) != (klen + dlen):
                 self.die('short key or data, line/record #%d', rec_nr)
 
-            if read(1) != '\n':
+            if read(1) != b'\n':
                 self.die('bad line ending, line/record #%d', rec_nr)
 
-            self.writer.put(
-                key.encode(self.encoding), data.encode(self.encoding)
-            )
+            self.writer.put(key, data)
 
     def end(self):
         self.writer.finalize()
@@ -107,7 +106,14 @@ class CdbMake(object):
         raise SystemExit(0)
 
 
-def main(args=None, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
+def main(args=None, **kwargs):
+    stdin = kwargs.get('stdin')
+    if stdin is None:
+        stdin = sys.stdin if six.PY2 else sys.stdin.buffer
+
+    stdout = kwargs.get('stdout', sys.stdout)
+    stderr = kwargs.get('stderr', sys.stderr)
+
     args = sys.argv[1:] if (args is None) else args
     self = CdbMake(stdin, stdout, stderr)
     self.parse_args(args)
