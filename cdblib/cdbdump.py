@@ -20,7 +20,7 @@ def cdbdump(parsed_args, **kwargs):
         stdout = sys.stdout if six.PY2 else sys.stdout.buffer
 
     # Consume stdin and parse the cdb file
-    reader_cls = cdblib.Reader64 if vars(parsed_args)['64'] else cdblib.Reader
+    reader_cls = cdblib.Reader64 if parsed_args['64'] else cdblib.Reader
     data = stdin.read()
     reader = reader_cls(data)
 
@@ -43,7 +43,7 @@ def cdbdump(parsed_args, **kwargs):
     stdout.write(b'\n')
 
 
-def main(args=None):
+def main(args=None, **kwargs):
     args = sys.argv[1:] if (args is None) else args
     parser = argparse.ArgumentParser(
         description=(
@@ -55,8 +55,8 @@ def main(args=None):
         '-64', action='store_true', help='Use non-standard 64-bit file offsets'
     )
 
-    parsed_args = parser.parse_args(args)
-    cdbdump(parsed_args)
+    parsed_args = vars(parser.parse_args(args))
+    cdbdump(parsed_args, **kwargs)
 
 
 if __name__ == '__main__':
