@@ -179,6 +179,12 @@ class Writer(object):
         fp.write(b'\x00' * (256 * self.pair_size))
         self._unordered = [[] for i in range(256)]
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.finalize()
+
     def put(self, key, value=b''):
         '''Write a string key/value pair to the output file.'''
         assert type(key) is six.binary_type and type(value) is six.binary_type

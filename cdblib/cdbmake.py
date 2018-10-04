@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-'''Python version of DJB's cdbmake, optionally supporting Python's hash().
+'''Python version of DJB's cdbmake. Supports standard 32-bit cdb files as
+well as 64-bit variants.
 
 Usage:
     cdbmake.py [-p] <output> <tmp>
 
 Where:
-    -p      Use Python hash() instead of standard DJB hash function.
     -8      Use cdblib.Writer64 rather than cdblib.Writer.
     output  Eventual destination path, must reside on same filesystem as tmp.
     tmp     Temporary file to use during write. Atomically replaces output at
@@ -30,7 +30,6 @@ class CdbMake(object):
         self.stdin = stdin
         self.stdout = stdout
         self.stderr = stderr
-        self.python_hash = False
         self.writer_cls = cdblib.Writer
 
     def parse_args(self, args):
@@ -40,9 +39,7 @@ class CdbMake(object):
             self.usage(str(e))
 
         for opt, arg in opts:
-            if opt == '-p':
-                self.python_hash = True
-            elif opt == '-8':
+            if opt == '-8':
                 self.writer_cls = cdblib.Writer64
 
         if len(args) != 2:
@@ -52,9 +49,8 @@ class CdbMake(object):
         self.tmp_filename = args[1]
 
     def begin(self):
-        hash_func = hash if self.python_hash else cdblib.djb_hash
         self.fp = io.open(self.tmp_filename, 'wb')
-        self.writer = self.writer_cls(self.fp, hash_func)
+        self.writer = self.writer_cls(self.fp)
 
     def parse_input(self):
         read = self.stdin.read

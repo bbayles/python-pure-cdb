@@ -7,6 +7,7 @@ import unittest
 
 from functools import partial
 from os.path import abspath, dirname, join
+from zlib import adler32
 
 import six
 
@@ -253,18 +254,6 @@ class Reader64NativeInterfaceDjbHashTestCase(ReaderNativeInterfaceTestBase,
     HASHFN = staticmethod(cdblib.djb_hash)
 
 
-class ReaderNativeInterfaceNativeHashTestCase(ReaderNativeInterfaceTestBase,
-                                              unittest.TestCase):
-    HASHFN = staticmethod(hash)
-
-
-class Reader64NativeInterfaceNativeHashTestCase(ReaderNativeInterfaceTestBase,
-                                                unittest.TestCase):
-    reader_cls = cdblib.Reader64
-    writer_cls = cdblib.Writer64
-    HASHFN = staticmethod(hash)
-
-
 class ReaderNativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
                                             unittest.TestCase):
     # Ensure collisions don't result in the wrong keys being returned.
@@ -277,6 +266,20 @@ class Reader64NativeInterfaceNullHashTestCase(ReaderNativeInterfaceTestBase,
     writer_cls = cdblib.Writer64
     # Ensure collisions don't result in the wrong keys being returned.
     HASHFN = staticmethod(lambda s: 1)
+
+
+class ReaderNativeInterfaceAltHashTestCase(ReaderNativeInterfaceTestBase,
+                                           unittest.TestCase):
+    # Use the adler32 checksum as a "hash"
+    HASHFN = staticmethod(lambda s: adler32(s) & 0xffffffff)
+
+
+class Reader64NativeInterfaceAltHashTestCase(ReaderNativeInterfaceTestBase,
+                                             unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
+    # Use the adler32 checksum as a "hash"
+    HASHFN = staticmethod(lambda s: adler32(s) & 0xffffffff)
 
 
 class WriterNativeInterfaceTestBase(object):
@@ -373,18 +376,6 @@ class Writer64NativeInterfaceDjbHashTestCase(WriterNativeInterfaceTestBase,
     HASHFN = staticmethod(cdblib.djb_hash)
 
 
-class WriterNativeInterfaceNativeHashTestCase(WriterNativeInterfaceTestBase,
-                                              unittest.TestCase):
-    HASHFN = staticmethod(hash)
-
-
-class Writer64NativeInterfaceNativeHashTestCase(WriterNativeInterfaceTestBase,
-                                                unittest.TestCase):
-    reader_cls = cdblib.Reader64
-    writer_cls = cdblib.Writer64
-    HASHFN = staticmethod(hash)
-
-
 class WriterNativeInterfaceNullHashTestCase(WriterNativeInterfaceTestBase,
                                             unittest.TestCase):
     HASHFN = staticmethod(lambda s: 1)
@@ -395,6 +386,18 @@ class WriterNativeInterfaceNullHashTestCase(WriterNativeInterfaceTestBase,
     reader_cls = cdblib.Reader64
     writer_cls = cdblib.Writer64
     HASHFN = staticmethod(lambda s: 1)
+
+
+class WriterNativeInterfaceAltHashTestCase(WriterNativeInterfaceTestBase,
+                                           unittest.TestCase):
+    HASHFN = staticmethod(lambda s: adler32(s) & 0xffffffff)
+
+
+class WriterNativeInterfaceAltHashTestCase(WriterNativeInterfaceTestBase,
+                                           unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
+    HASHFN = staticmethod(lambda s: adler32(s) & 0xffffffff)
 
 
 class WriterKnownGoodTestBase(object):
@@ -419,6 +422,18 @@ class WriterKnownGoodTestBase(object):
         self.writer.put(b'dave', b'dave')
         self.assertEqual(self.get_md5(), self.SINGLE_REC_MD5)
 
+    def test_context_manager_recovery(self):
+        # The context manager should finalize the file even if there's an error
+        # while it's open
+        with io.BytesIO() as f:
+            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+                writer.put(b'dave', b'dave')
+                self.assertRaises(Exception, lambda: self.writer.put, 1)
+
+            self.assertEqual(
+                hashlib.md5(f.getvalue()).hexdigest(), self.SINGLE_REC_MD5
+            )
+
     def test_dup_keys(self):
         self.writer.puts(b'dave', (b'dave', b'dave'))
         self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
@@ -435,10 +450,30 @@ class WriterKnownGoodTestBase(object):
             self.writer.put(key, value)
         self.assertEqual(self.get_md5(), self.TOP250PWS_MD5)
 
+    def test_known_good_top250_context_manager(self):
+        with io.BytesIO() as f:
+            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+                for key, value in self.get_iteritems(self.top250_path):
+                    writer.put(key, value)
+
+            self.assertEqual(
+                hashlib.md5(f.getvalue()).hexdigest(), self.TOP250PWS_MD5
+            )
+
     def test_known_good_pwdump(self):
         for key, value in self.get_iteritems(self.pwdump_path):
             self.writer.put(key, value)
         self.assertEqual(self.get_md5(), self.PWDUMP_MD5)
+
+    def test_known_good_pwdump_context_manager(self):
+        with io.BytesIO() as f:
+            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+                for key, value in self.get_iteritems(self.pwdump_path):
+                    writer.put(key, value)
+
+            self.assertEqual(
+                hashlib.md5(f.getvalue()).hexdigest(), self.PWDUMP_MD5
+            )
 
 
 class WriterKnownGoodDjbHashTestCase(WriterKnownGoodTestBase,
@@ -465,34 +500,6 @@ class Writer64KnownGoodDjbHashTestCase(WriterKnownGoodTestBase,
     DUP_KEYS_MD5 = '1aae63d751ce5eea9e61916ae0aa00b3'
     TOP250PWS_MD5 = 'c6bdb3c7645c5d62747ac74895f9e90a'
     PWDUMP_MD5 = '3b1b4964294897c6ca119a6c6ae0094f'
-
-
-@unittest.skipIf(six.PY3, 'Python 3.3+ use random hash seeds')
-class WriterKnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
-                                        unittest.TestCase):
-    HASHFN = staticmethod(hash)
-
-    EMPTY_MD5 = 'a646d6b87720195feb973de130b10123'
-    SINGLE_REC_MD5 = '9121969c106905e3fd72162c7bbb96a8'
-    DUP_KEYS_MD5 = '331840e761aee9092af6f8b0370b7d9a'
-    TOP250PWS_MD5 = 'e641b7b7d109b2daaa08335a1dc457c6'
-    PWDUMP_MD5 = 'd5726fc195460c9eef3117111975532f'
-
-
-@unittest.skipIf(six.PY3, 'Python 3.3+ use random hash seeds')
-class Writer64KnownGoodNativeHashTestCase(WriterKnownGoodTestBase,
-                                          unittest.TestCase):
-    HASHFN = staticmethod(hash)
-    reader_cls = cdblib.Reader64
-    writer_cls = cdblib.Writer64
-    top250_path = testdata_path('top250pws.cdb64')
-    pwdump_path = testdata_path('pwdump.cdb64')
-
-    EMPTY_MD5 = 'c43c406a037989703e0d58ed9f17ba3c'
-    SINGLE_REC_MD5 = 'fdd4a8c055d2000cba9b712ceb8a1eba'
-    DUP_KEYS_MD5 = '01e40b34cc51906f798233a2cd0fb09d'
-    TOP250PWS_MD5 = '3cd101954030b153584b620db5255b45'
-    PWDUMP_MD5 = 'a7275f527d54f51c10aebafaae1ab445'
 
 
 class WriterKnownGoodNullHashTestCase(WriterKnownGoodTestBase,
