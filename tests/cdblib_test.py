@@ -422,6 +422,18 @@ class WriterKnownGoodTestBase(object):
         self.writer.put(b'dave', b'dave')
         self.assertEqual(self.get_md5(), self.SINGLE_REC_MD5)
 
+    def test_context_manager_recovery(self):
+        # The context manager should finalize the file even if there's an error
+        # while it's open
+        with io.BytesIO() as f:
+            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+                writer.put(b'dave', b'dave')
+                self.assertRaises(Exception, lambda: self.writer.put, 1)
+
+            self.assertEqual(
+                hashlib.md5(f.getvalue()).hexdigest(), self.SINGLE_REC_MD5
+            )
+
     def test_dup_keys(self):
         self.writer.puts(b'dave', (b'dave', b'dave'))
         self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
@@ -438,10 +450,30 @@ class WriterKnownGoodTestBase(object):
             self.writer.put(key, value)
         self.assertEqual(self.get_md5(), self.TOP250PWS_MD5)
 
+    def test_known_good_top250_context_manager(self):
+        with io.BytesIO() as f:
+            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+                for key, value in self.get_iteritems(self.top250_path):
+                    writer.put(key, value)
+
+            self.assertEqual(
+                hashlib.md5(f.getvalue()).hexdigest(), self.TOP250PWS_MD5
+            )
+
     def test_known_good_pwdump(self):
         for key, value in self.get_iteritems(self.pwdump_path):
             self.writer.put(key, value)
         self.assertEqual(self.get_md5(), self.PWDUMP_MD5)
+
+    def test_known_good_pwdump_context_manager(self):
+        with io.BytesIO() as f:
+            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+                for key, value in self.get_iteritems(self.pwdump_path):
+                    writer.put(key, value)
+
+            self.assertEqual(
+                hashlib.md5(f.getvalue()).hexdigest(), self.PWDUMP_MD5
+            )
 
 
 class WriterKnownGoodDjbHashTestCase(WriterKnownGoodTestBase,
