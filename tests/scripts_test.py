@@ -56,7 +56,7 @@ class ScriptsTests(unittest.TestCase):
         stdin = io.BytesIO(TYPES_DATA)
         cdb_path = os.path.join(self.temp_dir, 'out_64.cdb')
         tmp_path = os.path.join(self.temp_dir, 'tmp_64.cdb')
-        args = ['-8', cdb_path, tmp_path]
+        args = ['-64', cdb_path, tmp_path]
         python_pure_cdbmake(args, stdin=stdin)
 
         with io.open(cdb_path, 'rb') as infile:
