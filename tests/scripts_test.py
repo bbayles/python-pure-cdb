@@ -50,6 +50,105 @@ class ScriptsTests(unittest.TestCase):
             output_hash.hexdigest(), 'dcc8b6502bcb648a71a6a080409312bb'
         )
 
+    def _cdbmake_invalid(self, stdin, record_number, expected_error):
+        stderr = io.StringIO()
+        cdb_path = os.path.join(self.temp_dir, 'out.cdb')
+        tmp_path = os.path.join(self.temp_dir, 'tmp.cdb')
+        args = [cdb_path, tmp_path]
+
+        with self.assertRaises(SystemExit):
+            python_pure_cdbmake(args, stdin=stdin, stderr=stderr)
+
+        error_msg = stderr.getvalue().lower()
+        self.assertIn('record {}'.format(record_number), error_msg)
+        self.assertIn(expected_error, error_msg)
+
+    def test_cdbmake_invalid_start(self):
+        # Records must start with +
+        stdin = io.BytesIO(
+            b'+7,3:integer->241\n'
+            b'-2,2:aa->bb\n'
+            b'\n'
+        )
+        self._cdbmake_invalid(stdin, 2, 'invalid start')
+
+    def test_cdbmake_invalid_klen(self):
+        # Key length must be terminated by ,
+        stdin = io.BytesIO(
+            b'+7,3:integer->241\n'
+            b'+2;2:aa->bb\n'
+            b'\n'
+        )
+        self._cdbmake_invalid(stdin, 2, 'invalid klen')
+
+        # Key length must be an integer
+        stdin = io.BytesIO(
+            b'+7,3:integer->241\n'
+            b'+0b,2:aa->bb\n'
+            b'\n'
+        )
+        self._cdbmake_invalid(stdin, 2, 'invalid klen')
+
+    def test_cdbmake_invalid_separator(self):
+        # Key and data must be separated by ->
+        stdin = io.BytesIO(
+            b'+7,3:integer->241\n'
+            b'+2,2:aa>>bb\n'
+            b'\n'
+        )
+        self._cdbmake_invalid(stdin, 2, 'invalid separator')
+
+    def test_cdbmake_invalid_dlen(self):
+        # Data length must be terminated by :
+        stdin = io.BytesIO(
+            b'+7,3:integer->241\n'
+            b'+2,2;aa->bb\n'
+            b'\n'
+        )
+        self._cdbmake_invalid(stdin, 2, 'invalid dlen')
+
+    def test_cdbmake_short_record(self):
+        # File cuts off before data
+        stdin = io.BytesIO(
+            b'+7,3:integer->241\n'
+            b'+2,2:aa->b'
+        )
+        self._cdbmake_invalid(stdin, 2, 'did not match given length')
+
+    def test_cdbmake_long_record(self):
+        # Data too long - should have newline
+        stdin = io.BytesIO(
+            b'+7,3:integer->241\n'
+            b'+2,2:aa->bbb\n'
+            b'\n'
+        )
+        self._cdbmake_invalid(stdin, 2, 'invalid character')
+
+    def test_cdbmake_weird(self):
+        # Records can have a newline
+        stdin = io.BytesIO(
+            b'+2,2:,:->:,\n'
+            b'+2,2:->-><-\n'
+            b'+7,7:newline->123\n'
+            b'567\n'
+            b'+2,2:\0+->+\0\n'
+            b'\n'
+        )
+        cdb_path = os.path.join(self.temp_dir, 'out.cdb')
+        tmp_path = os.path.join(self.temp_dir, 'tmp.cdb')
+        args = [cdb_path, tmp_path]
+
+        python_pure_cdbmake(args, stdin=stdin)
+
+        with io.open(cdb_path, 'rb') as infile:
+            data = infile.read()
+
+        reader = cdblib.Reader(data)
+        self.assertEqual(reader[b',:'], b':,')
+        self.assertEqual(reader[b'->'], b'<-')
+        self.assertEqual(reader[b'newline'], b'123\n567')
+        self.assertEqual(reader[b'\0+'], b'+\0')
+
     def test_cdbmake_64_bits(self):
         # Construct a 64-bit database with the CLI tool and read back the
         # records
@@ -64,7 +163,7 @@ class ScriptsTests(unittest.TestCase):
             output_hash = hashlib.md5()
             output_hash.update(data)
 
-        #  # Ensure that everything can be decoded properly
+        # Ensure that everything can be decoded properly
         with io.open(cdb_path, 'rb') as infile:
             data = infile.read()
 

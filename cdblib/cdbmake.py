@@ -56,24 +56,22 @@ class CDBMaker(object):
         record_number = 0
         while True:
             # Record starter: + character
+            record_number += 1
             plus = self.stdin.read(1)
             if plus == b'\n':
                 break
             elif plus != b'+':
                 self.fail('Invalid start', record_number)
-                break
 
             # Key length - must be an integer ending with ,
             klen = self.read_len(b',')
             if klen is None:
                 self.fail('Invalid klen', record_number)
-                break
 
             # Data length - must be an integer ending with :
             dlen = self.read_len(b':')
             if dlen is None:
                 self.fail('Invalid dlen', record_number)
-                break
 
             # key->data\n
             key = self.stdin.read(klen)
@@ -83,17 +81,14 @@ class CDBMaker(object):
 
             if arrow != b'->':
                 self.fail('Invalid separator', record_number)
-                break
 
             if len(key) + len(data) < klen + dlen:
                 self.fail(
                     'Key or data did not match given length', record_number
                 )
-                break
 
             if newline != b'\n':
                 self.fail('Invalid character after record', record_number)
-                break
 
             yield key, data
 
