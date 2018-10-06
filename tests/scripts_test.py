@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import unicode_literals
 
+import filecmp
 import hashlib
 import io
 import os.path
@@ -207,6 +208,58 @@ class ScriptsTests(unittest.TestCase):
                 data = stdout.getvalue()
 
         self.assertEqual(data, TYPES_DATA)
+
+    def _dump_then_make(self, path_to_dump, use_64=False):
+        # Feeding a file into python-pure-cdbump produces a stream, which
+        # can be fed into python-pure-cdbmake. The result should be an
+        # identical file.
+        dump_args = ['-64'] if use_64 else []
+
+        cdb_path = os.path.join(self.temp_dir, 'out.cdb')
+        tmp_path = os.path.join(self.temp_dir, 'tmp.cdb')
+        make_args = ['-64'] if use_64 else []
+        make_args += [cdb_path, tmp_path]
+
+        with io.open(path_to_dump, 'rb') as dump_in:
+            with io.BytesIO() as dump_out:
+                python_pure_cdbdump(dump_args, stdin=dump_in, stdout=dump_out)
+                dump_out.seek(0)
+                python_pure_cdbmake(make_args, stdin=dump_out)
+
+        self.assertTrue(filecmp.cmp(path_to_dump, cdb_path, shallow=False))
+
+    def test_dump_then_make(self):
+        self._dump_then_make(testdata_path('top250pws.cdb'))
+
+    def test_dump_then_make_64(self):
+        self._dump_then_make(testdata_path('top250pws.cdb64'), use_64=True)
+
+    def _make_then_dump(self, use_64=False):
+        # Feeding a stream into python-pure-cdbmake produces a file, which can
+        # be fed into python-pure-cdbdump. The result should be an identical
+        # stream.
+        cdb_path = os.path.join(self.temp_dir, 'out.cdb')
+        tmp_path = os.path.join(self.temp_dir, 'tmp.cdb')
+        make_args = ['-64'] if use_64 else []
+        make_args += [cdb_path, tmp_path]
+
+        dump_args = ['-64'] if use_64 else []
+
+        with io.BytesIO(TYPES_DATA) as make_in:
+            python_pure_cdbmake(make_args, stdin=make_in)
+
+        with io.open(cdb_path, 'rb') as dump_in:
+            with io.BytesIO() as dump_out:
+                python_pure_cdbdump(dump_args, stdin=dump_in, stdout=dump_out)
+                data = dump_out.getvalue()
+
+        self.assertEqual(data, TYPES_DATA)
+
+    def test_make_then_dump(self):
+        self._make_then_dump()
+
+    def test_make_then_dump_64(self):
+        self._make_then_dump(use_64=True)
 
 
 if __name__ == '__main__':
