@@ -97,8 +97,14 @@ class Reader(object):
 
     def gets(self, key):
         '''Yield values for key in insertion order.'''
-        # Truncate to 32 bits and remove sign.
-        h = self.hashfn(key) & 0xffffffff
+        try:
+            # Truncate to 32 bits and remove sign.
+            h = self.hashfn(key) & 0xffffffff
+        except TypeError as e:
+            msg = 'key must be of type {}'
+            e.args = (msg.format(six.binary_type.__name__),)
+            raise
+
         start, nslots = self.index[h & 0xff]
 
         if nslots:
@@ -187,7 +193,12 @@ class Writer(object):
 
     def put(self, key, value=b''):
         '''Write a string key/value pair to the output file.'''
-        assert type(key) is six.binary_type and type(value) is six.binary_type
+        if (
+            (not isinstance(key, six.binary_type)) or
+            (not isinstance(value, six.binary_type))
+        ):
+            msg = 'key and value must be of type {}'
+            raise TypeError(msg.format(six.binary_type.__name__))
 
         pos = self.fp.tell()
         self.fp.write(self.write_pair(len(key), len(value)))
