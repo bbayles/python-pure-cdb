@@ -98,13 +98,13 @@ class Reader(object):
     def gets(self, key):
         '''Yield values for key in insertion order.'''
         try:
+            # Truncate to 32 bits and remove sign.
             h = self.hashfn(key) & 0xffffffff
         except TypeError as e:
             msg = 'key must be of type {}'
             e.args = (msg.format(six.binary_type.__name__),)
             raise
 
-        # Truncate to 32 bits and remove sign.
         start, nslots = self.index[h & 0xff]
 
         if nslots:
