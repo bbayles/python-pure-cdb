@@ -15,33 +15,70 @@ from six.moves import range
 
 from .djb_hash import djb_hash
 
-
+# Structs for 32-bit databases
 read_2_le4 = Struct('<LL').unpack
 read_2_le8 = Struct('<QQ').unpack
+
+# Structs for 64-bit databases
 write_2_le4 = Struct('<LL').pack
 write_2_le8 = Struct('<QQ').pack
 
+# Encoders for keys
+DEFAULT_ENCODERS = {six.text_type: lambda x: x.encode('utf-8')}
+for t in six.integer_types:
+    DEFAULT_ENCODERS[t] = lambda x: six.text_type(x).encode('utf-8')
 
-class Reader(object):
+
+class _CDBBase(object):
+    def __init__(self, hashfn=djb_hash, strict=False, encoders=None):
+        self.hashfn = hashfn
+        self.strict = strict
+        self.encoders = DEFAULT_ENCODERS if (encoders is None) else encoders
+
+    def hash_key(self, key):
+        try:
+            h = self.hashfn(key)
+        except TypeError as e:
+            # If we're being strict, don't attempt to use non-binary keys
+            if self.strict:
+                msg = 'key must be of type {}'
+                e.args = (msg.format(six.binary_type.__name__),)
+                raise
+
+            # If we're not being strict, try to turn the keys into binary
+            try:
+                encoded_key = self.encoders[type(key)](key)
+            except KeyError:
+                e.args = 'could not encode {} to bytes'.format(key)
+                raise
+            else:
+                h = self.hashfn(encoded_key)
+
+        # Truncate to 32 bits and remove sign.
+        return (h & 0xffffffff)
+
+
+class Reader(_CDBBase):
     '''A dictionary-like object for reading a Constant Database accessed
     through a string or string-like sequence, such as mmap.mmap().'''
 
     read_pair = staticmethod(read_2_le4)
     pair_size = 8
 
-    def __init__(self, data, hashfn=djb_hash):
+    def __init__(self, data, **kwargs):
         '''Create an instance reading from a sequence and using hashfn to hash
         keys.'''
         if len(data) < 2048:
             raise IOError('CDB too small')
 
         self.data = data
-        self.hashfn = hashfn
         self.index = [self.read_pair(data[i:i+self.pair_size])
                       for i in range(0, 256*self.pair_size, self.pair_size)]
         self.table_start = min(p[0] for p in self.index)
         # Assume load load factor is 0.5 like official CDB.
         self.length = sum(p[1] >> 1 for p in self.index)
+
+        super(Reader, self).__init__(**kwargs)
 
     def iteritems(self):
         '''Like dict.iteritems(). Items are returned in insertion order.'''
@@ -97,14 +134,7 @@ class Reader(object):
 
     def gets(self, key):
         '''Yield values for key in insertion order.'''
-        try:
-            # Truncate to 32 bits and remove sign.
-            h = self.hashfn(key) & 0xffffffff
-        except TypeError as e:
-            msg = 'key must be of type {}'
-            e.args = (msg.format(six.binary_type.__name__),)
-            raise
-
+        h = self.hash_key(key)
         start, nslots = self.index[h & 0xff]
 
         if nslots:
@@ -169,21 +199,21 @@ class Reader64(Reader):
     pair_size = 16
 
 
-class Writer(object):
+class Writer(_CDBBase):
     '''Object for building new Constant Databases, and writing them to a
     seekable file-like object.'''
 
     write_pair = staticmethod(write_2_le4)
     pair_size = 8
 
-    def __init__(self, fp, hashfn=djb_hash):
+    def __init__(self, fp, **kwargs):
         '''Create an instance writing to a file-like object, using hashfn to
         hash keys.'''
         self.fp = fp
-        self.hashfn = hashfn
-
         fp.write(b'\x00' * (256 * self.pair_size))
         self._unordered = [[] for i in range(256)]
+
+        super(Writer, self).__init__(**kwargs)
 
     def __enter__(self):
         return self
@@ -193,19 +223,19 @@ class Writer(object):
 
     def put(self, key, value=b''):
         '''Write a string key/value pair to the output file.'''
-        if (
-            (not isinstance(key, six.binary_type)) or
-            (not isinstance(value, six.binary_type))
-        ):
-            msg = 'key and value must be of type {}'
+        # Ensure that the value is binary
+        if not isinstance(value, six.binary_type):
+            msg = 'value must be of type {}'
             raise TypeError(msg.format(six.binary_type.__name__))
+
+        # Computing the hash for the key also ensures that it's binary
+        h = self.hash_key(key)
 
         pos = self.fp.tell()
         self.fp.write(self.write_pair(len(key), len(value)))
         self.fp.write(key)
         self.fp.write(value)
 
-        h = self.hashfn(key) & 0xffffffff
         self._unordered[h & 0xff].append((h, pos))
 
     def puts(self, key, values):
