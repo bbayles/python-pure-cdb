@@ -334,7 +334,7 @@ class WriterNativeInterfaceTestBase(object):
         self.writer.putint(b'dave', 26)
         self.writer.putint(b'dave2', 26 << 32)
         self.writer.putint(b'dave3', True)  # int(True) is 1
-        self.writer.putint(b'dave4', False)  # int(False) is 4
+        self.writer.putint(b'dave4', False)  # int(False) is 0
 
     def test_putint_fail(self):
         for key, value, exc_type in [
@@ -450,7 +450,9 @@ class WriterKnownGoodTestBase(object):
 
     def setUp(self):
         self.sio = io.BytesIO()
-        self.writer = self.writer_cls(self.sio, hashfn=self.HASHFN)
+        self.writer = self.writer_cls(
+            self.sio, hashfn=self.HASHFN, strict=True
+        )
 
     def get_md5(self):
         self.writer.finalize()
@@ -467,7 +469,7 @@ class WriterKnownGoodTestBase(object):
         # The context manager should finalize the file even if there's an error
         # while it's open
         with io.BytesIO() as f:
-            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+            with self.writer_cls(f, hashfn=self.HASHFN, strict=True) as writer:
                 writer.put(b'dave', b'dave')
                 self.assertRaises(Exception, lambda: self.writer.put, 1)
 
@@ -483,7 +485,7 @@ class WriterKnownGoodTestBase(object):
         with io.open(filename, 'rb') as infile:
             data = infile.read()
 
-        reader = self.reader_cls(data, hashfn=self.HASHFN)
+        reader = self.reader_cls(data, hashfn=self.HASHFN, strict=True)
         return reader.iteritems()
 
     def test_known_good_top250(self):
@@ -493,7 +495,7 @@ class WriterKnownGoodTestBase(object):
 
     def test_known_good_top250_context_manager(self):
         with io.BytesIO() as f:
-            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+            with self.writer_cls(f, hashfn=self.HASHFN, strict=True) as writer:
                 for key, value in self.get_iteritems(self.top250_path):
                     writer.put(key, value)
 
@@ -508,7 +510,7 @@ class WriterKnownGoodTestBase(object):
 
     def test_known_good_pwdump_context_manager(self):
         with io.BytesIO() as f:
-            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+            with self.writer_cls(f, hashfn=self.HASHFN, strict=True) as writer:
                 for key, value in self.get_iteritems(self.pwdump_path):
                     writer.put(key, value)
 
