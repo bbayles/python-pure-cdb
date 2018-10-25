@@ -288,50 +288,66 @@ class WriterNativeInterfaceTestBase(object):
 
     def setUp(self):
         self.sio = sio = io.BytesIO()
-        self.writer = self.writer_cls(sio, hashfn=self.HASHFN)
+        self.writer = self.writer_cls(sio, hashfn=self.HASHFN, strict=True)
 
     def get_reader(self):
         self.writer.finalize()
-        return self.reader_cls(self.sio.getvalue(), hashfn=self.HASHFN)
-
-    def make_bad(self, method):
-        return partial(self.assertRaises, Exception, method)
+        return self.reader_cls(
+            self.sio.getvalue(), hashfn=self.HASHFN, strict=True
+        )
 
     def test_put(self):
         self.writer.put(b'dave', b'dave')
         self.assertEqual(self.get_reader().get(b'dave'), b'dave')
 
-        # Don't care about rich error, just as long as it crashes.
-        bad = self.make_bad(self.writer.put)
-        bad(b'dave', u'dave')
-        bad(u'dave', b'dave')
-        bad(b'dave', 123)
-        bad(123, b'dave')
+    def test_put_fail(self):
+        for key, value, exc_type in [
+            # Key is not binary
+            (u'dave', b'dave', TypeError),
+            (123, b'dave', TypeError),
+            # Value is not binary
+            (b'dave', u'dave', TypeError),
+            (b'dave', 123, TypeError),
+        ]:
+            with self.assertRaises(exc_type):
+                self.writer.put(key, value)
 
     def test_puts(self):
         lst = b'dave dave dave'.split()
-
         self.writer.puts(b'dave', lst)
         self.assertEqual(list(self.get_reader().gets(b'dave')), lst)
 
-        bad = self.make_bad(self.writer.puts)
-        bad('dave', map(six.text_type, lst))
-        bad(u'dave', lst)
-        bad(b'dave', (123,))
-        bad(123, lst)
+    def test_puts_fail(self):
+        lst = b'dave dave dave'.split()
+        for key, value, exc_type in [
+            # Key is not binary
+            (u'dave', lst, TypeError),
+            (123, lst, TypeError),
+            # Value is not binary
+            (b'dave',map(six.text_type, lst), TypeError),
+            (b'dave', (123,), TypeError),
+        ]:
+            with self.assertRaises(exc_type):
+                self.writer.puts(key, value)
 
     def test_putint(self):
         self.writer.putint(b'dave', 26)
         self.writer.putint(b'dave2', 26 << 32)
+        self.writer.putint(b'dave3', True)  # int(True) is 1
+        self.writer.putint(b'dave4', False)  # int(False) is 4
 
-        reader = self.get_reader()
-        self.assertEqual(reader.getint(b'dave'), 26)
-        self.assertEqual(reader.getint(b'dave2'), 26 << 32)
-
-        bad = self.make_bad(self.writer.putint)
-        bad(True)
-        bad(b'dave')
-        bad(None)
+    def test_putint_fail(self):
+        for key, value, exc_type in [
+            # Key is not binary
+            (u'dave', 123, TypeError),
+            (123, 123, TypeError),
+            # Value is not int
+            (b'dave', b'', ValueError),
+            (b'dave', u'', ValueError),
+            (b'dave', None, TypeError),
+        ]:
+            with self.assertRaises(exc_type):
+                self.writer.putint(key, value)
 
     def test_putints(self):
         self.writer.putints(b'dave', range(10))
@@ -340,28 +356,53 @@ class WriterNativeInterfaceTestBase(object):
             list(range(10))
         )
 
-        bad = self.make_bad(self.writer.putints)
-        bad((True, False))
-        bad(b'dave')
-        bad(u'dave')
+    def test_putints_fail(self):
+        for key, value, exc_type in [
+            # Key is not binary
+            (u'dave', [123], TypeError),
+            (123, [123], TypeError),
+            # Value is not an iterable of ints
+            (b'dave', [123, b''], ValueError),
+            (b'dave', [123, u''], ValueError),
+            (b'dave', [123, None], TypeError),
+        ]:
+            with self.assertRaises(exc_type):
+                self.writer.putints(key, value)
 
     def test_putstring(self):
         self.writer.putstring(b'dave', u'dave')
         self.assertEqual(self.get_reader().getstring(b'dave'), u'dave')
 
-        bad = self.make_bad(self.writer.putstring)
-        bad(b'dave')
-        bad(123)
-        bad(None)
+    def test_putstring_fail(self):
+        for key, value, exc_type in [
+            # Key is not binary
+            (u'dave', u'dave', TypeError),
+            (123, u'dave', TypeError),
+            # Value is not a string
+            (b'dave', 123, TypeError),
+            (b'dave', True, TypeError),
+            (b'dave', None, TypeError),
+        ]:
+            with self.assertRaises(exc_type):
+                self.writer.putstring(key, value)
 
     def test_putstrings(self):
         lst = [u'zark', u'quark']
         self.writer.putstrings(b'dave', lst)
         self.assertEqual(list(self.get_reader().getstrings(b'dave')), lst)
 
-        bad = self.make_bad(self.writer.putstrings)
-        bad(b'dave', range(10))
-        bad(b'dave', map(str, lst))
+    def test_putstrings_fail(self):
+        for key, value, exc_type in [
+            # Key is not binary
+            (u'dave', u'dave', TypeError),
+            (123, u'dave', TypeError),
+            # Value is not an iterable of strings
+            (b'dave', [u'123', 123], TypeError),
+            (b'dave', [u'123', True], TypeError),
+            (b'dave', [u'123', None], TypeError),
+        ]:
+            with self.assertRaises(exc_type):
+                self.writer.putstrings(key, value)
 
 
 class WriterNativeInterfaceDjbHashTestCase(WriterNativeInterfaceTestBase,

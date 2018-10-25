@@ -44,7 +44,6 @@ class _CDBBase(object):
                 msg = 'key must be of type {}'
                 e.args = (msg.format(six.binary_type.__name__),)
                 raise
-
             # If we're not being strict, try to turn the keys into binary
             try:
                 encoded_key = self.encoders[type(key)](key)
@@ -53,9 +52,11 @@ class _CDBBase(object):
                 raise
             else:
                 h = self.hashfn(encoded_key)
+        else:
+            encoded_key = key
 
         # Truncate to 32 bits and remove sign.
-        return (h & 0xffffffff)
+        return encoded_key, (h & 0xffffffff)
 
 
 class Reader(_CDBBase):
@@ -134,7 +135,7 @@ class Reader(_CDBBase):
 
     def gets(self, key):
         '''Yield values for key in insertion order.'''
-        h = self.hash_key(key)
+        key, h = self.hash_key(key)
         start, nslots = self.index[h & 0xff]
 
         if nslots:
@@ -229,7 +230,7 @@ class Writer(_CDBBase):
             raise TypeError(msg.format(six.binary_type.__name__))
 
         # Computing the hash for the key also ensures that it's binary
-        h = self.hash_key(key)
+        key, h = self.hash_key(key)
 
         pos = self.fp.tell()
         self.fp.write(self.write_pair(len(key), len(value)))
@@ -247,12 +248,12 @@ class Writer(_CDBBase):
     def putint(self, key, value):
         '''Write an integer as a base-10 string associated with the given key
         to the output file.'''
-        self.put(key, str(value).encode('ascii'))
+        self.put(key, str(int(value)).encode('ascii'))
 
     def putints(self, key, values):
         '''Write zero or more integers for the same key to the output file.
         Equivalent to calling putint() in a loop.'''
-        self.puts(key, (str(value).encode('ascii') for value in values))
+        self.puts(key, (str(int(value)).encode('ascii') for value in values))
 
     def putstring(self, key, value, encoding='utf-8'):
         '''Write a unicode string associated with the given key to the output
