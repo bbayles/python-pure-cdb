@@ -33,7 +33,10 @@ class _CDBBase(object):
     def __init__(self, hashfn=djb_hash, strict=False, encoders=None):
         self.hashfn = hashfn
         self.strict = strict
-        self.encoders = DEFAULT_ENCODERS if (encoders is None) else encoders
+
+        self.encoders = DEFAULT_ENCODERS.copy()
+        if encoders is not None:
+            self.encoders.update(encoders)
 
     def hash_key(self, key):
         try:

@@ -7,6 +7,7 @@ import unittest
 
 from functools import partial
 from os.path import abspath, dirname, join
+from struct import pack
 from zlib import adler32
 
 import six
@@ -569,6 +570,101 @@ class Writer64KnownGoodNullHashTestCase(WriterKnownGoodTestBase,
     DUP_KEYS_MD5 = 'e1fe0e8ae7bacd9dbe6a87cfccc627fa'
     TOP250PWS_MD5 = '25519af3e573e867f423956fc6e9b8e8'
     PWDUMP_MD5 = '5a8d1dd40d82af01cbb23ceab16c1588'
+
+
+class StrictnessTestsBase(object):
+    def test_string_keys(self):
+        with io.BytesIO() as f:
+            with self.writer_cls(f) as writer:
+                writer.put(u'key_1', b'11')
+                writer.puts(u'key_2', [b'21', b'22'])
+                writer.putint(u'key_3', 31)
+                writer.putints(u'key_4', [41, 42])
+                writer.putstring(u'key_5', u's51')
+                writer.putstrings(u'key_6', [u's61', u'62'])
+
+            reader = self.reader_cls(f.getvalue(), strict=False)
+            self.assertEqual(reader.get(u'key_1'), b'11')
+            self.assertEqual(list(reader.gets(u'key_2')), [b'21', b'22'])
+            self.assertEqual(reader.getint(u'key_3'), 31)
+            self.assertEqual(list(reader.getints(u'key_4')), [41, 42])
+            self.assertEqual(reader.getstring(u'key_5'), u's51')
+            self.assertEqual(
+                list(reader.getstrings(u'key_6')), [u's61', u'62']
+            )
+
+    def test_int_keys(self):
+        with io.BytesIO() as f:
+            with self.writer_cls(f) as writer:
+                writer.put(1, b'11')
+                writer.puts(2, [b'21', b'22'])
+                writer.putint(3, 31)
+                writer.putints(4, [41, 42])
+                writer.putstring(5, u's51')
+                writer.putstrings(6, [u's61', u'62'])
+
+            reader = self.reader_cls(f.getvalue(), strict=False)
+
+        self.assertEqual(reader.get(1), b'11')
+        self.assertEqual(list(reader.gets(2)), [b'21', b'22'])
+        self.assertEqual(reader.getint(3), 31)
+        self.assertEqual(list(reader.getints(4)), [41, 42])
+        self.assertEqual(reader.getstring(5), u's51')
+        self.assertEqual(list(reader.getstrings(6)), [u's61', u'62'])
+
+    def test_encoding(self):
+        # b'1', u'1', and 1 all encode to the same thing, so writing to
+        # one is the same as writing to all.
+        with io.BytesIO() as f:
+            with self.writer_cls(f) as writer:
+                writer.put(1, b'11')
+                writer.put(u'1', b'12')
+                writer.put(b'1', b'13')
+
+            reader = self.reader_cls(f.getvalue())
+
+        self.assertEqual(list(reader.gets(1)), [b'11', b'12', b'13'])
+        self.assertEqual(list(reader.gets(u'1')), [b'11', b'12', b'13'])
+        self.assertEqual(list(reader.gets(b'1')), [b'11', b'12', b'13'])
+
+    def test_custom_encoding(self):
+        encoders = {
+            # override int encoder
+            int: lambda x: pack('!H', x),
+            # add list encoder
+            list: lambda x: b'|'.join(x)
+        }
+        with io.BytesIO() as f:
+            with self.writer_cls(f, encoders=encoders) as writer:
+                # Override in place - ints get encoded differently
+                writer.put(257, b'\x01\x01')
+                # New encoder - lists get encoded instead of throwing errors
+                writer.put([b'key_1', b'key_2'], b'key_1|key_2')
+                # No override; default encoder for string is active
+                writer.put(u'\N{SNOWMAN}', b'\xe2\x98\x83')
+                # No encoder for None - error
+                with self.assertRaises(KeyError):
+                    writer.put(None, b'fail!')
+
+            reader = self.reader_cls(f.getvalue(), encoders=encoders)
+
+        # Read back as non-binary types and as the corresponding binary type
+        for key, value in [
+            (257, b'\x01\x01'),
+            ([b'key_1', b'key_2'], b'key_1|key_2'),
+            (u'\N{SNOWMAN}', b'\xe2\x98\x83'),
+        ]:
+            self.assertEqual(reader.get(key), value)
+            self.assertEqual(reader.get(value), value)
+
+class StrictnessTests32(StrictnessTestsBase, unittest.TestCase):
+    reader_cls = cdblib.Reader
+    writer_cls = cdblib.Writer
+
+
+class StrictnessTests64(StrictnessTestsBase, unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    writer_cls = cdblib.Writer64
 
 
 if __name__ == '__main__':
