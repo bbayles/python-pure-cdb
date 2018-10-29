@@ -32,34 +32,38 @@ for t in six.integer_types:
 class _CDBBase(object):
     def __init__(self, hashfn=djb_hash, strict=False, encoders=None):
         self.hashfn = hashfn
-        self.strict = strict
+
+        if strict:
+            self.hash_key = self.hash_key_strict
 
         self.encoders = DEFAULT_ENCODERS.copy()
         if encoders is not None:
             self.encoders.update(encoders)
 
     def hash_key(self, key):
-        try:
-            h = self.hashfn(key)
-        except TypeError as e:
-            # If we're being strict, don't attempt to use non-binary keys
-            if self.strict:
-                msg = 'key must be of type {}'
-                e.args = (msg.format(six.binary_type.__name__),)
-                raise
-            # If we're not being strict, try to turn the keys into binary
+        if not isinstance(key, six.binary_type):
             try:
                 encoded_key = self.encoders[type(key)](key)
-            except KeyError:
+            except KeyError as e:
                 e.args = 'could not encode {} to bytes'.format(key)
                 raise
-            else:
-                h = self.hashfn(encoded_key)
         else:
             encoded_key = key
 
         # Truncate to 32 bits and remove sign.
+        h = self.hashfn(encoded_key)
         return encoded_key, (h & 0xffffffff)
+
+    def hash_key_strict(self, key):
+        try:
+            h = self.hashfn(key)
+        except TypeError as e:
+            msg = 'key must be of type {}'
+            e.args = (msg.format(six.binary_type.__name__),)
+            raise
+
+        # Truncate to 32 bits and remove sign.
+        return key, (h & 0xffffffff)
 
 
 class Reader(_CDBBase):
