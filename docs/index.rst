@@ -6,6 +6,7 @@ Introduction
 
 The `python-pure-cdb` package (`pure-cdb <https://pypi.org/project/pure-cdb/>`_ on PyPI)
 is a Python library for working with D.J. Bernstein's "constant datbases."
+It supports both Python 2.7 and Python 3.
 
 In addition to being able to read and write the database files produced by
 other `cdb` tools, `python-pure-cdb` can produce and consume "64-bit"
