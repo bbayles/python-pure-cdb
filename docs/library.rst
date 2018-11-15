@@ -19,7 +19,8 @@ a datbase's content:
 An `mmap` object can be used to avoid reading an entire database into memory -
 see below.
 
-----
+Retrieving data
+^^^^^^^^^^^^^^^
 
 The `.items()` method returns a list of `(key, value)` tuples representing
 all of the records stored in the database (in insertion order).
@@ -47,7 +48,7 @@ pairs) stored in the database.
     >>> len(reader)
     3
 
-The `in` operator can be used to test whether a key is present in the datbase
+The `in` operator can be used to test whether a key is present in the database.
 
     >>> b'k1` in reader
     True
@@ -74,7 +75,8 @@ with `key`.
     [b'v2a', b'v2b']
 
 `Reader` instances also support dict-like retrieval of the first value
-associated with `key`:
+associated with `key`. `KeyError` will be raised if the requested key isn't in
+the database.
 
     >>> reader[b'k2']
     b'v2a'
@@ -125,9 +127,9 @@ automatically.
     >>> reader.get(1)  # Integer key
     b'value_for_1'
 
-To disable this behavior, pass `strict=True` when creating the `Reader` object.
-This will increase read performance, and is useful when you want to deal
-with `bytes` keys only.
+To disable this behavior, pass `strict=True` when creating the `Reader`
+instance. This will increase read performance, and is useful when you want to
+deal with `bytes` keys only.
 
     >>> import cdblib
     >>> with open('info.cdb', 'rb') as f:
@@ -160,9 +162,98 @@ information on `mmap`.
 The `Writer` classes
 --------------------
 
+`cdblib.Writer` produces standard "32-bit" cdb files, which should be readable
+with other `cdb` tools like `cdbget` and `cdbdump`. `cdblib.Writer64` produces
+"64-bit" cdb files, which can be read by this package.
+
+The `Writer` classes take one positional argument, a file-object opened in
+binary mode.
+
+    >>> import cdblib
+    ...
+    ... with open('info.cdb', 'wb') as f:
+    ...     writer = cdblib.Writer(f):
+    ...     writer.put(b'k1', b'v1a')
+    ...     writer.finalize()
+
+`Writer` instances don't create readable databases until their  `.finalize()`
+method is called. You should use them as a context manager wherever possible -
+this ensures that `.finalize()` is called.
+
+    >>> with open('info.cdb', 'wb') as f:
+    ...     with cdblib.Writer(f) as writer:
+    ...         writer.put(b'k1', b'v1a')
+
+
+Storing data
+^^^^^^^^^^^^
+
+The `.put()` method is used to create a database record for a binary key
+and a binary value.
+
+    >>> import io
+    >>> import cdblib
+    >>> f = io.BytesIO()  # Use an in-memory database
+    >>> writer = cdblib.writer(f)
+    >>> writer.put(b'k1', b'v1a')
+
+The `.puts()` method adds multiple binary values at the same key.
+
+    >>> writer.puts(b'k2', [b'v2a', b'v2b'])
+
+To store integer values, use `.putint()` or `.putints()`.
+
+    >>> writer.putint(b'key_with_int_values', 1)
+    >>> writer.putints(b'key_with_int_values', [2, 3])
+
+To store text data, use `.putstring()` or `.putstrings()`, with an optional
+`encoding` keyword argument. The default encoding is `'utf-8'`.
+
+    >>> writer.putstring(b'fancy_a', 'Ä')  # stores b'\xc3\x84'
+    >>> writer.putstring(b'fancy_a', 'Ä', encoding='cp1252')  # stores b'\xc4'
+    >>> writer.putstrings(b'boring_a', ['a', 'A'])
+
+As above, don't forget to call `.finalize()` to write the database to disk if
+you're not using a context manager.
+
+    >>> writer.finalize()
+
 Encoding and strict mode
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+Database keys are stored as `bytes` objects. As with `Reader` instances,
+`Writer` instances will attempt to convert text keys and integer keys
+automatically.
+
+To disable this behavior, pass `strict=True` when creating the `Writer`
+instance. This will increase write performance, and is useful when you want to
+deal with `bytes` keys only.
 
 Alternate hash functions
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default `python-pure-cdb` will use the standard cdb hash function
+described on `djb's page <https://cr.yp.to/cdb/cdb.txt>`_.
+
+You can substitute in your own hash function when using a `Writer` instance,
+if you're so inclined. This will of course require you to use the same hash
+function when reading the database.
+
+    >>> import io
+    ... import zlib
+    ...
+    ... import cdblib
+    ...
+    ...
+    ... def custom_hash(x):
+    ...     return zlib.adler32(x) & 0xffffffff
+    ...
+    ...
+    ... with io.BytesIO() as f:
+    ...     with cdblib.Writer(f, hashfn=custom_hash) as writer:
+    ...         writer.put(b'k1', b'v1a')
+    ...         writer.puts(b'k2', [b'v2a', b'v2b'])
+    ...
+    ...     reader = cdblib.Reader(f.getvalue(), hashfn=custom_hash)
+    ...     reader.items()
+    [(b'k1', b'v1a'), (b'k2', b'v2a'), (b'k2', b'v2b')]
