@@ -54,34 +54,115 @@ The `in` operator can be used to test whether a key is present in the datbase
     >>> b'k3' in reader
     False
 
----
+----
 
-The `.get(key)` method returns the first value in the database for `key`.
+The `.get()` method returns the first value in the database for `key`.
+If the key isn't in the database, `None` will be returned. To use a different
+default value, use the `default` keyword:
 
     >>> reader.get(b'k2')
-    b'v2b'
+    b'v2a'
+    >>> reader.get(b'missing')
+    None
+    >>> reader.get(b'missing', default=b'fallback')
+    b'fallback'
 
-The `.gets(key)` method returns an iterator over all the values associated
+The `.gets()` method returns an iterator over all the values associated
 with `key`.
 
-    >>> list(reader.)gets(b'k2')
-    [b'k2a', b'k2b']
+    >>> list(reader.gets(b'k2'))
+    [b'v2a', b'v2b']
+
+`Reader` instances also support dict-like retrieval of the first value
+associated with `key`:
+
+    >>> reader[b'k2']
+    b'v2a'
+
+----
+
+Note that the values retrieved by the `.get()` and `.gets()` methods are
+`bytes` objects.
+
+If the values in the database represent integers, you can retrieve them as
+Python `int` objects with the `.getint()` and `.getints()` methods.
+
+    >>> reader.get(b'key_with_int_value')
+    b'1'
+    >>> reader.getint(b'key_with_int_value')
+    1
+
+Similarly, the `.getstring()` and `.getstrings()` methods will retrieve
+the values as `str` objects.
+
+    >>> reader.get(b'key_with_str_value')
+    b'text data'
+    >>> reader.getstring(b'key_with_str_value')
+    'text data'
+
+You may specify an encoding with the `encoding` keyword argument.
+
+    >>> reader.get(b'fancy_a_or_f')
+    b'\xc4'
+    >>> reader.getstring(b'fancy_a_or_f', encoding='cp1252')
+    'Ä'
+    >>> reader.getstring(b'fancy_a_or_f', encoding='mac-roman')
+    'ƒ'
 
 
-Notes on encoding
-^^^^^^^^^^^^^^^^^
+Encoding and strict mode
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Database keys are stored as `bytes` objects. By default, `Reader` instances
+will attempt to convert text keys (`str` on Python 3, `unicode` on Python 2)
+and integer keys (`int` on Python 3, `int` and `long` on Python 2)
+automatically.
+
+    >>> reader.get(b'1')  # Binary key
+    b'value_for_1'
+    >>> reader.get('1')  # Text key
+    b'value_for_1'
+    >>> reader.get(1)  # Integer key
+    b'value_for_1'
+
+To disable this behavior, pass `strict=True` when creating the `Reader` object.
+This will increase read performance, and is useful when you want to deal
+with `bytes` keys only.
+
+    >>> import cdblib
+    >>> with open('info.cdb', 'rb') as f:
+    ...     data = f.read()
+    >>> reader = cdblib.Reader(data, strict=True)
+    >>> reader.get(b'1')  # Binary key
+    b'value_for_1'
+    >>> reader.get(1)
+    ...
+    TypeError: key must be of type 'bytes'
+
 
 Limiting memory usage
 ^^^^^^^^^^^^^^^^^^^^^
 
-Alternate hash functions
-^^^^^^^^^^^^^^^^^^^^^^^^
+To avoid having to read a whole database into memory, use `cdblib.Reader`
+(or `cdblib.Reader64`) with `mmap.mmap`.
+
+    >>> from mmap import mmap, ACCESS_READ
+    ... from cdblib import Reader
+    ...
+    ... with open('info.cdb', 'rb') as f:
+    ...     with mmap(f.fileno(), 0, access=ACCESS_READ) as m:
+    ...         reader = Reader(m)
+    ...         reader.items()
+
+See the `Python docs <https://docs.python.org/3/library/mmap.html>`_ for more
+information on `mmap`.
 
 The `Writer` classes
 --------------------
 
-Notes on encoding
-^^^^^^^^^^^^^^^^^
+Encoding and strict mode
+^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 Alternate hash functions
 ^^^^^^^^^^^^^^^^^^^^^^^^
