@@ -9,7 +9,7 @@ The `Reader` classes
 produced by this package.
 
 The `Reader` classes take one positional argument, a `bytes`-like object with
-a datbase's content:
+a database's content:
 
     >>> import cdblib
     >>> with open('info.cdb', 'rb') as f:
