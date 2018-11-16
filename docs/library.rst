@@ -50,7 +50,7 @@ pairs) stored in the database.
 
 The `in` operator can be used to test whether a key is present in the database.
 
-    >>> b'k1` in reader
+    >>> b'k1' in reader
     True
     >>> b'k3' in reader
     False
@@ -80,6 +80,8 @@ the database.
 
     >>> reader[b'k2']
     b'v2a'
+    >>> reader[b'missing2']
+    KeyError: b'missing'
 
 ----
 
