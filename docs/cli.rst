@@ -43,7 +43,7 @@ utility, you have to specify two file paths:
     * The second (`cdb.tm`) is a temporary location to use when creating the
       database. It will be moved to the ultimate location after completion.
 
-.. code-block:: shell
+.. code-block:: none
 
     $ <records_file.txt python-pure-cdbmake ~/records_db.cdb /tmp/records_db.tmp
 
@@ -53,14 +53,18 @@ files at the expense of compatibility with other cdb packages.
 `python-pure-cdbdump`
 ---------------------
 
-.. code-block
+This utility creates a text export of the contents of a database file.
 
-    python-pure-cdbdump -h
-    usage: python-pure-cdbdump [-h] [-64]
+The output format is the same as the one used by `python-pure-cdbmake` for
+input- see above.
 
-    Python version of djb's cdbdump. Supports standard 32-bit cdb files as well as
-    64-bit variants.
+`python-pure-cdbdump` reads the database from stdin and prints to stdout.
 
-    optional arguments:
-      -h, --help  show this help message and exit
-      -64         Use non-standard 64-bit file offsets
+.. code-block:: none
+
+    $ <~records_db.cdb python-pure-cdbdump
+    +1,2:a->bb
+    +2,1:aa->b
+
+Use the `-64` switch to read databases created by this package using "64-bit"
+mode.

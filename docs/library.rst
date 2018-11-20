@@ -231,6 +231,10 @@ To disable this behavior, pass `strict=True` when creating the `Writer`
 instance. This will increase write performance, and is useful when you want to
 deal with `bytes` keys only.
 
+
+Advanced usage
+--------------
+
 Alternate hash functions
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -259,3 +263,16 @@ function when reading the database.
     ...     reader = cdblib.Reader(f.getvalue(), hashfn=custom_hash)
     ...     reader.items()
     [(b'k1', b'v1a'), (b'k2', b'v2a'), (b'k2', b'v2b')]
+
+C extension hash function
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When using CPython, you can build a C Extension that speeds up using the
+cdb hash function.
+
+Set the `ENABLE_DJB_HASH_CEXT` environment variable when executing `setup.py`
+to enable the extension:
+
+.. code-block:: none
+
+    $ ENABLE_DJB_HASH_CEXT=1 python setup.py install
