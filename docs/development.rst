@@ -18,7 +18,7 @@ Python version support
 
 `python-pure-cdb` supports the versions of Python currently being maintained
 by the PSF. If you find a bug when using an older version, feel free to
-file an issue about it, but it might not get fixed.
+file an issue about it, but note that it might not get fixed.
 
 License
 -------

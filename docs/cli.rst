@@ -27,7 +27,7 @@ Where:
     * `klen` is the length of `key` (in bytes)
     * `dlen` is the length of `data` (in bytes)
     * `key` can be any string of characters
-    * `data` can be any string of characters.
+    * `data` can be any string of characters
 
 Each record must end with a newline character. For example:
 
@@ -39,7 +39,7 @@ Each record must end with a newline character. For example:
 `python-pure-cdbmake` reads these records from stdin. When invoking the
 utility, you have to specify two file paths:
 
-    * The first (`cdb`) is the ultimate location of the database
+    * The first (`cdb`) is the ultimate location of the database.
     * The second (`cdb.tm`) is a temporary location to use when creating the
       database. It will be moved to the ultimate location after completion.
 
@@ -48,7 +48,7 @@ utility, you have to specify two file paths:
     $ <records_file.txt python-pure-cdbmake ~/records_db.cdb /tmp/records_db.tmp
 
 Use the `-64` switch to enable "64-bit" mode, which can write larger database
-files at the expense of compatibility with other cdb packages.
+files at the expense of compatibility with other `cdb` packages.
 
 `python-pure-cdbdump`
 ---------------------
@@ -56,7 +56,7 @@ files at the expense of compatibility with other cdb packages.
 This utility creates a text export of the contents of a database file.
 
 The output format is the same as the one used by `python-pure-cdbmake` for
-input- see above.
+input - see above.
 
 `python-pure-cdbdump` reads the database from stdin and prints to stdout.
 

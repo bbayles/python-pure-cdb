@@ -25,7 +25,7 @@ Pass it a `bytes`-like object of the file's contents to start:
     >>> reader = cdblib.Reader(data)
 
 `Reader` instances implement a `dict`-like interface. To retrieve everything
-stored in the datbase, use the `.iteritems()` method.
+stored in the database, use the `.iteritems()` method.
 
     >>> for key, value in reader.iteritems():
     ...     print('+{},{}:{}->{}'.format(len(key), len(value), key, value))

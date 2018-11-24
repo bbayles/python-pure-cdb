@@ -29,12 +29,13 @@ Note that a single key can have multiple values associated with it.
     >>> reader.items()
     [(b'k1', b'v1'), (b'k2', b'v2a'), (b'k2', b'v2b')]
 
-The `.iteritems()` is like `.items()`, but it returns an iterator over the
-items rather than a list.
+The `.iteritems()` method is like `.items()`, but it returns an iterator over
+the items rather than a list.
 
 The `.keys()` method returns a list of the keys stored in the database
 (in insertion order). The `.iterkeys()` method returns an iterator over the
-keys.
+keys. Note that keys will be repeated if a single key has multiple values
+associated with it.
 
 The `.values()` method returns a list of the values stored in the database
 (in insertion order). The `.itervalues()` method returns an iterator over the
@@ -165,10 +166,10 @@ The `Writer` classes
 --------------------
 
 `cdblib.Writer` produces standard "32-bit" cdb files, which should be readable
-with other `cdb` tools like `cdbget` and `cdbdump`. `cdblib.Writer64` produces
+by other `cdb` tools like `cdbget` and `cdbdump`. `cdblib.Writer64` produces
 "64-bit" cdb files, which can be read by this package.
 
-The `Writer` classes take one positional argument, a file-object opened in
+The `Writer` classes take one positional argument, a file-like object opened in
 binary mode.
 
     >>> import cdblib
