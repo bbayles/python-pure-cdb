@@ -1,11 +1,6 @@
-from __future__ import print_function, unicode_literals
-
 import argparse
-import io
 import os
 import sys
-
-import six
 
 import cdblib
 
@@ -15,7 +10,7 @@ class CDBMaker(object):
         # Read binary data from stdin and write errors to stderr (by default)
         self.stdin = kwargs.get('stdin')
         if self.stdin is None:
-            self.stdin = sys.stdin if six.PY2 else sys.stdin.buffer
+            self.stdin = sys.stdin.buffer
 
         self.stderr = kwargs.get('stderr', sys.stderr)
 
@@ -93,7 +88,7 @@ class CDBMaker(object):
             yield key, data
 
     def run(self):
-        with io.open(self.cdb_temp_path, 'wb') as tmpfile:
+        with open(self.cdb_temp_path, 'wb') as tmpfile:
             with self.writer_cls(tmpfile) as writer:
                 for key, data in self.get_items():
                     writer.put(key, data)

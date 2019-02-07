@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-from __future__ import unicode_literals
-
 import hashlib
 import io
 import unittest
@@ -9,8 +7,6 @@ from functools import partial
 from os.path import abspath, dirname, join
 from struct import pack
 from zlib import adler32
-
-import six
 
 import cdblib
 
@@ -38,7 +34,7 @@ class ReaderKnownGoodTestCase(unittest.TestCase):
     def reader_to_cdbmake_md5(self, filename):
         md5 = hashlib.md5()
 
-        with io.open(filename, 'rb') as infile:
+        with open(filename, 'rb') as infile:
             data = infile.read()
 
         for key, value in self.reader_cls(data).iteritems():
@@ -74,7 +70,7 @@ class ReaderDictLikeTestCase(unittest.TestCase):
     data_path = testdata_path('top250pws.cdb')
 
     def setUp(self):
-        with io.open(self.data_path, 'rb') as infile:
+        with open(self.data_path, 'rb') as infile:
             data = infile.read()
 
         self.reader = self.reader_cls(data)
@@ -98,11 +94,11 @@ class ReaderDictLikeTestCase(unittest.TestCase):
 
     def test_iterkeys(self):
         for key in self.reader.iterkeys():
-            self.assertIs(type(self.reader[key]), six.binary_type)
+            self.assertIs(type(self.reader[key]), bytes)
 
     def test___iter__(self):
         for key in self.reader:
-            self.assertIs(type(self.reader[key]), six.binary_type)
+            self.assertIs(type(self.reader[key]), bytes)
 
     def test_values_itervalues(self):
         inverted = dict((v, k) for (k, v) in self.reader.iteritems())
@@ -226,7 +222,7 @@ class ReaderNativeInterfaceTestBase(object):
 
     def test_getstring(self):
         self.assertEqual(self.reader.getstring(b'art'), u'\N{SNOWMAN}')
-        self.assertEqual(type(self.reader.getstring(b'art')), six.text_type)
+        self.assertEqual(type(self.reader.getstring(b'art')), str)
         self.assertEqual(None, self.reader.getstring(b'junk'))
 
         self.assertEqual(
@@ -238,7 +234,7 @@ class ReaderNativeInterfaceTestBase(object):
         art_strings = tuple(self.reader.getstrings(b'art'))
         self.assertEqual(art_strings, self.ARTS)
         self.assertTrue(
-            all(type(s) is six.text_type for s in art_strings)
+            all(type(s) is str for s in art_strings)
         )
         self.assertEqual(list(self.reader.getstrings(b'junk')), [])
 
@@ -325,7 +321,7 @@ class WriterNativeInterfaceTestBase(object):
             (u'dave', lst, TypeError),
             (123, lst, TypeError),
             # Value is not binary
-            (b'dave',map(six.text_type, lst), TypeError),
+            (b'dave', map(str, lst), TypeError),
             (b'dave', (123,), TypeError),
         ]:
             with self.assertRaises(exc_type):
@@ -375,14 +371,15 @@ class WriterNativeInterfaceTestBase(object):
         self.assertEqual(self.get_reader().getstring(b'dave'), u'dave')
 
     def test_putstring_fail(self):
+        exc_types = (AttributeError, TypeError)
         for key, value, exc_type in [
             # Key is not binary
-            (u'dave', u'dave', TypeError),
-            (123, u'dave', TypeError),
+            (u'dave', u'dave', exc_types),
+            (123, u'dave', exc_types),
             # Value is not a string
-            (b'dave', 123, TypeError),
-            (b'dave', True, TypeError),
-            (b'dave', None, TypeError),
+            (b'dave', 123, exc_types),
+            (b'dave', True, exc_types),
+            (b'dave', None, exc_types),
         ]:
             with self.assertRaises(exc_type):
                 self.writer.putstring(key, value)
@@ -393,14 +390,15 @@ class WriterNativeInterfaceTestBase(object):
         self.assertEqual(list(self.get_reader().getstrings(b'dave')), lst)
 
     def test_putstrings_fail(self):
+        exc_types = (AttributeError, TypeError)
         for key, value, exc_type in [
             # Key is not binary
-            (u'dave', u'dave', TypeError),
-            (123, u'dave', TypeError),
+            (u'dave', u'dave', exc_types),
+            (123, u'dave', exc_types),
             # Value is not an iterable of strings
-            (b'dave', [u'123', 123], TypeError),
-            (b'dave', [u'123', True], TypeError),
-            (b'dave', [u'123', None], TypeError),
+            (b'dave', [u'123', 123], exc_types),
+            (b'dave', [u'123', True], exc_types),
+            (b'dave', [u'123', None], exc_types),
         ]:
             with self.assertRaises(exc_type):
                 self.writer.putstrings(key, value)
@@ -483,7 +481,7 @@ class WriterKnownGoodTestBase(object):
         self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
 
     def get_iteritems(self, filename):
-        with io.open(filename, 'rb') as infile:
+        with open(filename, 'rb') as infile:
             data = infile.read()
 
         reader = self.reader_cls(data, hashfn=self.HASHFN, strict=True)

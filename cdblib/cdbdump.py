@@ -1,9 +1,5 @@
-from __future__ import print_function
-
 import argparse
 import sys
-
-import six
 
 import cdblib
 
@@ -12,12 +8,12 @@ def cdbdump(parsed_args, **kwargs):
     # Read binary data from stdin by default
     stdin = kwargs.get('stdin')
     if stdin is None:
-        stdin = sys.stdin if six.PY2 else sys.stdin.buffer
+        stdin = sys.stdin.buffer
 
     # Print text data to stdout by default
     stdout = kwargs.get('stdout')
     if stdout is None:
-        stdout = sys.stdout if six.PY2 else sys.stdout.buffer
+        stdout = sys.stdout.buffer
 
     # Consume stdin and parse the cdb file
     reader_cls = cdblib.Reader64 if parsed_args['64'] else cdblib.Reader

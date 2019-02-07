@@ -3,7 +3,7 @@ from os import environ
 
 from setuptools import Extension, find_packages, setup
 
-# Opt-in to building the C extensions for Python 2 by setting the
+# Opt-in to building the C extension by setting the
 # ENABLE_DJB_HASH_CEXT environment variable
 if environ.get('ENABLE_DJB_HASH_CEXT'):
     ext_modules = [
@@ -24,10 +24,11 @@ setup(
     keywords='cdb file format appengine database db',
     license='MIT',
     name='pure-cdb',
-    version='2.2.0',
+    version='4.0.0',
     packages=find_packages(include=['cdblib']),
     ext_modules=ext_modules,
-    install_requires=['six>=1.0.0,<2.0.0'],
+    install_requires=[],
+    python_requires='>=3.4',
     test_suite='tests',
     tests_require=['flake8'],
     entry_points={

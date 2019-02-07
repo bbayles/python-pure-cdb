@@ -2,12 +2,10 @@ dist: xenial
 language: "python"
 
 python:
-    - "2.7"
     - "3.4"
     - "3.5"
     - "3.6"
     - "3.7"
-    - "pypy2.7-6.0"
     - "pypy3.5-6.0"
 
 install:
@@ -16,6 +14,7 @@ install:
 
 script:
     - "coverage run --include='cdblib/*.py' setup.py test"
+    - "ENABLE_DJB_HASH_CEXT=1 coverage run --include='cdblib/*.py' setup.py test"
     - "flake8 ."
 
 notifications:

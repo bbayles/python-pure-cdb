@@ -119,9 +119,7 @@ Encoding and strict mode
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Database keys are stored as `bytes` objects. By default, `Reader` instances
-will attempt to convert text keys (`str` on Python 3, `unicode` on Python 2)
-and integer keys (`int` on Python 3, `int` and `long` on Python 2)
-automatically.
+will attempt to convert `str` keys and `int` keys automatically.
 
     >>> reader.get(b'1')  # Binary key
     b'value_for_1'
