@@ -5,13 +5,8 @@ that efficiently handle many keys, while remaining space-efficient.
     http://cr.yp.to/cdb.html
 
 '''
-from __future__ import unicode_literals
-
 from struct import Struct
 from itertools import chain
-
-import six
-from six.moves import range
 
 from .djb_hash import djb_hash
 
@@ -24,9 +19,10 @@ write_2_le4 = Struct('<LL').pack
 write_2_le8 = Struct('<QQ').pack
 
 # Encoders for keys
-DEFAULT_ENCODERS = {six.text_type: lambda x: x.encode('utf-8')}
-for t in six.integer_types:
-    DEFAULT_ENCODERS[t] = lambda x: six.text_type(x).encode('utf-8')
+DEFAULT_ENCODERS = {
+    str: lambda x: x.encode('utf-8'),
+    int: lambda x: str(x).encode('utf-8'),
+}
 
 
 class _CDBBase(object):
@@ -41,7 +37,7 @@ class _CDBBase(object):
             self.encoders.update(encoders)
 
     def hash_key(self, key):
-        if not isinstance(key, six.binary_type):
+        if not isinstance(key, bytes):
             try:
                 encoded_key = self.encoders[type(key)](key)
             except KeyError as e:
@@ -58,8 +54,8 @@ class _CDBBase(object):
         try:
             h = self.hashfn(key)
         except TypeError as e:
-            msg = 'key must be of type {}'
-            e.args = (msg.format(six.binary_type.__name__),)
+            msg = 'key must be of type bytes'
+            e.args = (msg,)
             raise
 
         # Truncate to 32 bits and remove sign.
@@ -232,9 +228,8 @@ class Writer(_CDBBase):
     def put(self, key, value=b''):
         '''Write a string key/value pair to the output file.'''
         # Ensure that the value is binary
-        if not isinstance(value, six.binary_type):
-            msg = 'value must be of type {}'
-            raise TypeError(msg.format(six.binary_type.__name__))
+        if not isinstance(value, bytes):
+            raise TypeError('value must be of type bytes')
 
         # Computing the hash for the key also ensures that it's binary
         key, h = self.hash_key(key)
@@ -265,12 +260,12 @@ class Writer(_CDBBase):
     def putstring(self, key, value, encoding='utf-8'):
         '''Write a unicode string associated with the given key to the output
         file after encoding it as UTF-8 or the given encoding.'''
-        self.put(key, six.text_type.encode(value, encoding))
+        self.put(key, value.encode(encoding))
 
     def putstrings(self, key, values, encoding='utf-8'):
         '''Write zero or more unicode strings to the output file. Equivalent to
         calling putstring() in a loop.'''
-        self.puts(key, (six.text_type.encode(v, encoding) for v in values))
+        self.puts(key, (v.encode(encoding) for v in values))
 
     def finalize(self):
         '''Write the final hash tables to the output file, and write out its

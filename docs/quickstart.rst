@@ -35,7 +35,7 @@ To retrieve the first value stored at a key, use the `.get()` method.
     >>> reader.get(b'some_key')
     b'some_value'
 
-Note that all keys and values are `bytes` objects (`str` on Python 2).
+Note that all keys and values are `bytes` objects.
 For more information, see the library documentation.
 
 For "64-bit" database files, use `cdblib.Reader64` instead of `cdblib.Reader`.
@@ -53,7 +53,6 @@ Then write to the database with the `.put()` method.
    ...    with cdblib.Writer(f) as f:
    ...        writer.put(b'key', b'value')
 
-As with the reader class, all keys and values are `bytes` objects
-(`str` on Python 2).
+As with the reader class, all keys and values are `bytes` objects.
 
 For "64-bit" database files, use `cdblib.Writer64` instead of `cdblib.Writer`.
