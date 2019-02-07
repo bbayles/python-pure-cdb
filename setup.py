@@ -24,10 +24,11 @@ setup(
     keywords='cdb file format appengine database db',
     license='MIT',
     name='pure-cdb',
-    version='3.0.0',
+    version='4.0.0',
     packages=find_packages(include=['cdblib']),
     ext_modules=ext_modules,
     install_requires=[],
+    python_requires='>=3.4',
     test_suite='tests',
     tests_require=['flake8'],
     entry_points={
