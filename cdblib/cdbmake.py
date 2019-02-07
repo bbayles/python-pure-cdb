@@ -1,5 +1,4 @@
 import argparse
-import io
 import os
 import sys
 
@@ -89,7 +88,7 @@ class CDBMaker(object):
             yield key, data
 
     def run(self):
-        with io.open(self.cdb_temp_path, 'wb') as tmpfile:
+        with open(self.cdb_temp_path, 'wb') as tmpfile:
             with self.writer_cls(tmpfile) as writer:
                 for key, data in self.get_items():
                     writer.put(key, data)

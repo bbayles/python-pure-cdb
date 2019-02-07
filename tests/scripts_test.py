@@ -39,7 +39,7 @@ class ScriptsTests(unittest.TestCase):
         args = [cdb_path, tmp_path]
         python_pure_cdbmake(args, stdin=stdin)
 
-        with io.open(cdb_path, 'rb') as infile:
+        with open(cdb_path, 'rb') as infile:
             data = infile.read()
             output_hash = hashlib.md5()
             output_hash.update(data)
@@ -139,7 +139,7 @@ class ScriptsTests(unittest.TestCase):
 
         python_pure_cdbmake(args, stdin=stdin)
 
-        with io.open(cdb_path, 'rb') as infile:
+        with open(cdb_path, 'rb') as infile:
             data = infile.read()
 
         reader = cdblib.Reader(data)
@@ -157,13 +157,13 @@ class ScriptsTests(unittest.TestCase):
         args = ['-64', cdb_path, tmp_path]
         python_pure_cdbmake(args, stdin=stdin)
 
-        with io.open(cdb_path, 'rb') as infile:
+        with open(cdb_path, 'rb') as infile:
             data = infile.read()
             output_hash = hashlib.md5()
             output_hash.update(data)
 
         # Ensure that everything can be decoded properly
-        with io.open(cdb_path, 'rb') as infile:
+        with open(cdb_path, 'rb') as infile:
             data = infile.read()
 
         reader = cdblib.Reader64(data)
@@ -175,7 +175,7 @@ class ScriptsTests(unittest.TestCase):
         # Dump a pre-made file to text and compare the output to what
         # is given by the official cdbdump tool
         top250_path = testdata_path('top250pws.cdb')
-        with io.open(top250_path, 'rb') as stdin:
+        with open(top250_path, 'rb') as stdin:
             with io.BytesIO() as stdout:
                 python_pure_cdbdump([], stdin=stdin, stdout=stdout)
                 data = stdout.getvalue()
@@ -192,7 +192,7 @@ class ScriptsTests(unittest.TestCase):
         # tool. Since the cdbdump is text, the 64-bit database should
         # produce the same input as the 32-bit database
         cdb_path = os.path.join(self.temp_dir, 'out_64.cdb')
-        with io.open(cdb_path, 'wb') as outfile:
+        with open(cdb_path, 'wb') as outfile:
             writer = cdblib.Writer64(outfile)
             writer.put(b'binary', b'\x81')
             writer.putstring(b'text', u'\U0001f574')
@@ -200,7 +200,7 @@ class ScriptsTests(unittest.TestCase):
             writer.putint(b'integer', 241)
             writer.finalize()
 
-        with io.open(cdb_path, 'rb') as stdin:
+        with open(cdb_path, 'rb') as stdin:
             with io.BytesIO() as stdout:
                 python_pure_cdbdump(['-64'], stdin=stdin, stdout=stdout)
                 data = stdout.getvalue()
@@ -218,7 +218,7 @@ class ScriptsTests(unittest.TestCase):
         make_args = ['-64'] if use_64 else []
         make_args += [cdb_path, tmp_path]
 
-        with io.open(path_to_dump, 'rb') as dump_in:
+        with open(path_to_dump, 'rb') as dump_in:
             with io.BytesIO() as dump_out:
                 python_pure_cdbdump(dump_args, stdin=dump_in, stdout=dump_out)
                 dump_out.seek(0)
@@ -246,7 +246,7 @@ class ScriptsTests(unittest.TestCase):
         with io.BytesIO(TYPES_DATA) as make_in:
             python_pure_cdbmake(make_args, stdin=make_in)
 
-        with io.open(cdb_path, 'rb') as dump_in:
+        with open(cdb_path, 'rb') as dump_in:
             with io.BytesIO() as dump_out:
                 python_pure_cdbdump(dump_args, stdin=dump_in, stdout=dump_out)
                 data = dump_out.getvalue()

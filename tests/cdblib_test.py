@@ -34,7 +34,7 @@ class ReaderKnownGoodTestCase(unittest.TestCase):
     def reader_to_cdbmake_md5(self, filename):
         md5 = hashlib.md5()
 
-        with io.open(filename, 'rb') as infile:
+        with open(filename, 'rb') as infile:
             data = infile.read()
 
         for key, value in self.reader_cls(data).iteritems():
@@ -70,7 +70,7 @@ class ReaderDictLikeTestCase(unittest.TestCase):
     data_path = testdata_path('top250pws.cdb')
 
     def setUp(self):
-        with io.open(self.data_path, 'rb') as infile:
+        with open(self.data_path, 'rb') as infile:
             data = infile.read()
 
         self.reader = self.reader_cls(data)
@@ -481,7 +481,7 @@ class WriterKnownGoodTestBase(object):
         self.assertEqual(self.get_md5(), self.DUP_KEYS_MD5)
 
     def get_iteritems(self, filename):
-        with io.open(filename, 'rb') as infile:
+        with open(filename, 'rb') as infile:
             data = infile.read()
 
         reader = self.reader_cls(data, hashfn=self.HASHFN, strict=True)
