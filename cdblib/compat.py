@@ -120,7 +120,7 @@ class cdb:
                 for e in pair:
                     try:
                         e = e.decode(self.encoding)
-                    except (UnicodeDecodeError):
+                    except UnicodeDecodeError:
                         pass
                     decoded_pair.append(e)
 
@@ -155,7 +155,14 @@ class cdb:
         If there are fewer than ``i`` items stored under key ``k``, return
         ``None``.
         """
-        return next(islice(self._reader.gets(k), i, i + 1), None)
+        value = next(islice(self._reader.gets(k), i, i + 1), None)
+        if not self.encoding:
+            return value
+
+        try:
+            return value.decode(self.encoding)
+        except (AttributeError, UnicodeDecodeError):
+            return value
 
     def __getitem__(self, key):
         value = self.get(key)
@@ -167,8 +174,16 @@ class cdb:
     def getall(self, k):
         """Return a list of the values stored under key ``k``.
         """
+        ret = []
+        ret_append = ret.append
+        for value in self._reader.gets(k):
+            try:
+                value = value.decode(self.encoding)
+            except (AttributeError, UnicodeDecodeError):
+                value = value
+            ret_append(value)
 
-        return list(self._reader.gets(k))
+        return ret
 
     def keys(self):
         """Return a list of the distinct keys stored in the database.

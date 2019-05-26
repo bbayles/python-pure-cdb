@@ -37,7 +37,9 @@ class CompatTests(unittest.TestCase):
 
     def test_add(self):
         self.db.add('a', '4')
+        self.assertEqual(self.db.numentries, 6)
         self.db.add('a', '4')
+        self.assertEqual(self.db.numentries, 7)
 
     def test_numentries(self):
         self.assertEqual(self.db.numentries, 5)
@@ -47,6 +49,29 @@ class CompatTests(unittest.TestCase):
     def test_finish(self):
         self.db.finish()
         self.assertFalse(exists(self.tmp_path))
+
+    def test_get(self):
+        reader = self._get_reader()
+        self.assertEqual(reader.get('a'), '1')
+        self.assertEqual(reader.get('a', 1), '2')
+        self.assertEqual(reader.get('a', 2), b'\x80')
+        self.assertEqual(reader.get('a', 3), None)
+
+    def test_getitem(self):
+        reader = self._get_reader()
+        self.assertEqual(reader['a'], '1')
+        self.assertEqual(reader['b'], '1')
+        self.assertEqual(reader['c'], '1')
+
+        with self.assertRaises(KeyError):
+            reader['d']
+
+    def test_getall(self):
+        reader = self._get_reader()
+        self.assertEqual(reader.getall('a'), ['1', '2', b'\x80'])
+        self.assertEqual(reader.getall('b'), ['1'])
+        self.assertEqual(reader.getall('c'), ['1'])
+        self.assertEqual(reader.getall('d'), [])
 
     def test_each(self):
         reader = self._get_reader()
@@ -73,8 +98,9 @@ class CompatTests(unittest.TestCase):
         self.assertIsNone(reader.nextkey())
         self.assertIsNone(reader.nextkey())
 
-    def test_size(self):
+    def test_name_size(self):
         reader = self._get_reader()
+        self.assertEqual(reader.name, self.cdb_path)
         self.assertEqual(reader.size, 2178)
 
 

@@ -8,6 +8,7 @@ Contents
 
    quickstart.rst
    library.rst
+   compat.rst
    cli.rst
    versions.rst
    development.rst
