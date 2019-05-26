@@ -41,7 +41,7 @@ The `.keys()` method returns a list of distinct keys from the database.
 
 The `cdb` object keeps an iterator over the distinct keys of the database.
 The `.firstkey()` method resets the iterator and returns the first stored key.
-The `.nextkey()` advances the iterator and returns the next key.
+`.nextkey()` advances the iterator and returns the next key.
 After exhausting the iterator, `None` will be returned until `.firstkey()` is
 called again.
 
@@ -91,9 +91,8 @@ Writing new databases
 ---------------------
 
 The `cdbmake()` class is used to create a new database. Call it with two
-file paths: the first is the ultimate location of the database.
-temporary location to use when creating the database.
-It will be moved to the ultimate location after completion.
+file paths: (1) the ultimate location of the database,
+(2) a temporary location to use when creating the database.
 
     >>> cdb_path = '/tmp/info.cdb'
     >>> tmp_path = cdb_path + '.tmp'
@@ -128,7 +127,8 @@ It also decodes text data when reading:
     b'\x80 binary data'
 
 `utf-8` encoding is used by default in `cdblib.compat.init()` and `cdblib.compat.cdbmake()`.
-Pass a different encoding with the `encoding` keyword argument to use a different scheme.
+Pass a different encoding with the `encoding` keyword argument.
+
 Turn off automatic encoding or decoding by supplying `encoding=None`.
 All keys and values will be assumed to be `bytes` objects.
 
