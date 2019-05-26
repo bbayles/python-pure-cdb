@@ -50,44 +50,32 @@ class CompatTests(unittest.TestCase):
 
     def test_each(self):
         reader = self._get_reader()
-        try:
-            self.assertEqual(reader.each(), ('a', '1'))
-            self.assertEqual(reader.each(), ('a', '2'))
-            self.assertEqual(reader.each(), ('b', '1'))
-            self.assertEqual(reader.each(), ('c', '1'))
-            self.assertEqual(reader.each(), ('a', b'\x80'))
-            self.assertIsNone(reader.each())
-            self.assertEqual(reader.each(), ('a', '1'))
-        finally:
-            reader._file_obj.close()
+        self.assertEqual(reader.each(), ('a', '1'))
+        self.assertEqual(reader.each(), ('a', '2'))
+        self.assertEqual(reader.each(), ('b', '1'))
+        self.assertEqual(reader.each(), ('c', '1'))
+        self.assertEqual(reader.each(), ('a', b'\x80'))
+        self.assertIsNone(reader.each())
+        self.assertEqual(reader.each(), ('a', '1'))
 
     def test_firstkey(self):
         reader = self._get_reader()
-        try:
-            self.assertEqual(reader.firstkey(), 'a')
-            self.assertEqual(reader.nextkey(), 'b')
-            self.assertEqual(reader.firstkey(), 'a')
-            self.assertEqual(reader.nextkey(), 'b')
-        finally:
-            reader._file_obj.close()
+        self.assertEqual(reader.firstkey(), 'a')
+        self.assertEqual(reader.nextkey(), 'b')
+        self.assertEqual(reader.firstkey(), 'a')
+        self.assertEqual(reader.nextkey(), 'b')
 
     def test_nextkey(self):
         reader = self._get_reader()
-        try:
-            self.assertEqual(reader.nextkey(), 'a')
-            self.assertEqual(reader.nextkey(), 'b')
-            self.assertEqual(reader.nextkey(), 'c')
-            self.assertIsNone(reader.nextkey())
-            self.assertIsNone(reader.nextkey())
-        finally:
-            reader._file_obj.close()
+        self.assertEqual(reader.nextkey(), 'a')
+        self.assertEqual(reader.nextkey(), 'b')
+        self.assertEqual(reader.nextkey(), 'c')
+        self.assertIsNone(reader.nextkey())
+        self.assertIsNone(reader.nextkey())
 
     def test_size(self):
         reader = self._get_reader()
-        try:
-            self.assertEqual(reader.size, 2178)
-        finally:
-            reader._file_obj.close()
+        self.assertEqual(reader.size, 2178)
 
 
 if __name__ == '__main__':
