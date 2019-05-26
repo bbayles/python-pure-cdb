@@ -8,13 +8,15 @@ from tempfile import mkdtemp
 
 try:
     import cdb
+    test_cdb = True
 except ImportError:
     import cdblib.compat as cdb
+    test_cdb = False
 
 from tests.cdblib_test import testdata_path
 
 
-class CompatTests(unittest.TestCase):
+class CompatTests(object):
     def setUp(self):
         self.temp_dir = mkdtemp()
         self.cdb_path = join(self.temp_dir, 'database.cdb')
@@ -100,8 +102,18 @@ class CompatTests(unittest.TestCase):
 
     def test_name_size(self):
         reader = self._get_reader()
-        self.assertEqual(reader.name, self.cdb_path)
+        self.assertEqual(reader.name.decode('utf-8'), self.cdb_path)
         self.assertEqual(reader.size, 2178)
+
+
+@unittest.skipIf(not test_cdb, 'Tests for Python 2 module')
+class PythonCDBTests(CompatTests, unittest.TestCase):
+    pass
+
+
+@unittest.skipIf(test_cdb, 'Tests for Python 3 module')
+class PythonPureCDBTests(CompatTests, unittest.TestCase):
+    pass
 
 
 if __name__ == '__main__':

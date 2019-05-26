@@ -130,3 +130,26 @@ It also decodes text data when reading:
 `utf-8` encoding is used by default in `cdblib.compat.init()` and `cdblib.compat.cdbmake()`.
 Pass a different encoding with the `encoding` keyword argument to use a different scheme.
 Turn off automatic encoding or decoding by supplying `encoding=None`.
+All keys and values will be assumed to be `bytes` objects.
+
+    >>> existing_db = cdblib.compat.init(cdb_path, encoding=None)
+    >>> new_db = cdblib.compat.make(cdb_path, tmp_path, encoding=None)
+
+
+Other notes
+-----------
+
+The `python-cdb` package accepts integer file descriptors as well as file paths
+in `init()` and `cdbmake()`. This module does not.
+
+The `cdb` objects (returned by the `init()` function) and the `cdbmake` objects
+close their open file objects at interpreter exit.
+You may call the `._cleanup()` method on either one to close the objects
+yourself (this method is not avaialble when using the `python-cdb` package).
+
+The `cdb` object returned by the `init()` function uses `mmap.mmap` to avoid
+reading the whole database file into memory.
+This may be inappropriate when reading database files from certain locations,
+such as network drives.
+See the `Python docs <https://docs.python.org/3/library/mmap.html>`_ for more
+information on `mmap`.
