@@ -64,6 +64,9 @@ class cdbmake:
         """Finalize the database being written to. Then move the temporary
         database to its final location.
         """
+        if self._finished:
+            return
+
         self._writer.finalize()
         self._temp_obj.close()
         rename(self.fntmp, self.fn)
