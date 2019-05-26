@@ -11,17 +11,21 @@ class error(IOError):
 
 
 class cdbmake:
-    def __init__(self, cdb, tmp):
+    def __init__(self, cdb, tmp, encoding='utf-8'):
         """Create a new database to be stored at the path given by
         *cdb*. Records will be written to the file at the path given by
         *tmp*. After the ``finish()`` method is called, the file at *cdb*
         will be replaced by the one at *tmp*.
+        If *encoding* is given, ``str`` keys and values will be converted
+        to ``bytes`` with the given encoding. If *encoding* is ``None``, only
+        ``bytes`` keys and values are accepted.
         """
         self.fn = cdb
         self.fntmp = tmp
+        self.encoding = encoding
 
         self._temp_obj = open(self.fntmp, 'wb')
-        self._writer = Writer(self._temp_obj)
+        self._writer = Writer(self._temp_obj, strict=True)
         self.numentries = 0
         self._finished = False
 
@@ -31,7 +35,18 @@ class cdbmake:
         if self._finished:
             raise error('cdbmake object already finished')
 
-        self._writer.put(key, data)
+        args = []
+        for arg in (key, data):
+            if isinstance(arg, bytes):
+                args.append(arg)
+            elif isinstance(arg, str) and self.encoding:
+                args.append(arg.encode(self.encoding))
+            else:
+                raise TypeError(
+                    'add method only accepts bytes and str objects'
+                )
+
+        self._writer.put(*args)
         self.numentries += 1
 
     def addmany(self, items):
@@ -56,14 +71,16 @@ class cdbmake:
 
 
 class cdb:
-    def __init__(self, f):
+    def __init__(self, f, encoding='utf-8'):
         self._file_path = f
+        self.encoding = encoding
+
         self._file_obj = open(self._file_path, mode='rb')
         self._mmap_obj = mmap(self._file_obj.fileno(), 0, access=ACCESS_READ)
         self._reader = Reader(self._mmap_obj)
 
         self._keys = self._get_key_iterator()
-        self._items = cycle(chain(self._reader.iteritems(), [None]))
+        self._items = cycle(chain(self._decoded_items(), [None]))
 
     def _unique_keys(self, keys):
         seen = set()
@@ -73,8 +90,24 @@ class cdb:
                 seen_add(k)
                 yield k
 
+    def _decoded_items(self):
+        for pair in self._reader.iteritems():
+            if not self.encoding:
+                yield pair
+            else:
+                decoded_pair = []
+                for e in pair:
+                    try:
+                        e = e.decode(self.encoding)
+                    except (UnicodeDecodeError):
+                        pass
+                    decoded_pair.append(e)
+
+                yield tuple(decoded_pair)
+
     def _get_key_iterator(self):
-        unique_keys = self._unique_keys(self._reader.iterkeys())
+        all_keys = (k for k, v in self._decoded_items())
+        unique_keys = self._unique_keys(all_keys)
         return cycle(chain(unique_keys, repeat(None)))
 
     def each(self):
@@ -138,8 +171,10 @@ class cdb:
         return getsize(self._file_path)
 
 
-def init(f):
+def init(f, encoding='utf-8'):
     """Return a ``cdb`` object based on the database stored at the file path
     given by *f*.
+    If *encoding* is given, retrieved keys and values will be decoded using
+    the given encoding (if possible).
     """
-    return cdb(f)
+    return cdb(f, encoding=encoding)
