@@ -1,8 +1,13 @@
 from itertools import chain, cycle, islice, repeat
 from mmap import mmap, ACCESS_READ
 from os import rename
+from os.path import getsize
 
 from .cdblib import Reader, Writer
+
+
+class error(IOError):
+    pass
 
 
 class cdbmake:
@@ -12,17 +17,20 @@ class cdbmake:
         *tmp*. After the ``finish()`` method is called, the file at *cdb*
         will be replaced by the one at *tmp*.
         """
-
         self.fn = cdb
         self.fntmp = tmp
 
         self._temp_obj = open(self.fntmp, 'wb')
         self._writer = Writer(self._temp_obj)
         self.numentries = 0
+        self._finished = False
 
     def add(self, key, data):
         """Store a record in the database.
         """
+        if self._finished:
+            raise error('cdbmake object already finished')
+
         self._writer.put(key, data)
         self.numentries += 1
 
@@ -44,6 +52,7 @@ class cdbmake:
         self._writer.finalize()
         self._temp_obj.close()
         rename(self.fntmp, self.fn)
+        self._finished = True
 
 
 class cdb:
@@ -54,17 +63,25 @@ class cdb:
         self._reader = Reader(self._mmap_obj)
 
         self._keys = self._get_key_iterator()
-        self._items = cycle(self._reader.iteritems(), [None])
+        self._items = cycle(chain(self._reader.iteritems(), [None]))
+
+    def _unique_keys(self, keys):
+        seen = set()
+        seen_add = seen.add
+        for k in keys:
+            if k not in seen:
+                seen_add(k)
+                yield k
 
     def _get_key_iterator(self):
-        return cycle(chain(self._reader.iterkeys(), repeat(None)))
+        unique_keys = self._unique_keys(self._reader.iterkeys())
+        return cycle(chain(unique_keys, repeat(None)))
 
     def each(self):
         """Return successive ``(key, value)`` tuples from the database.
         After the last record is returned, the next call will return ``None``.
         The call after that will return the first record again.
         """
-
         return next(self._items)
 
     @property
@@ -76,7 +93,6 @@ class cdb:
         If ``nextkey()`` is called after ``firstkey()``, the second key will
         returned.
         """
-
         self._keys = self._get_key_iterator()
         return next(self._keys)
 
@@ -85,7 +101,6 @@ class cdb:
         If there are fewer than ``i`` items stored under key ``k``, return
         ``None``.
         """
-
         return next(islice(self._reader.gets(k), i, i + 1), None)
 
     def __getitem__(self, key):
@@ -120,11 +135,11 @@ class cdb:
 
     @property
     def size(self):
-        return self._reader.length
+        return getsize(self._file_path)
 
 
 def init(f):
-    """Return a ``cdb`` object based on the database stored at file path
-    *f*.
+    """Return a ``cdb`` object based on the database stored at the file path
+    given by *f*.
     """
     return cdb(f)
