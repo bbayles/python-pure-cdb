@@ -1,5 +1,3 @@
-import atexit
-
 from itertools import chain, cycle, islice, repeat
 from mmap import mmap, ACCESS_READ
 from os import rename
@@ -27,8 +25,6 @@ class cdbmake:
         self.encoding = encoding
 
         self._temp_obj = open(self.fntmp, 'wb')
-        atexit.register(self._cleanup)
-
         self._writer = Writer(self._temp_obj, strict=True)
         self.numentries = 0
         self._finished = False
@@ -38,6 +34,9 @@ class cdbmake:
             self._temp_obj.close()
         except Exception:
             pass
+
+    def __del__(self):
+        self._cleanup()
 
     def add(self, key, data):
         """Store a record in the database.
@@ -90,7 +89,6 @@ class cdb:
 
         self._file_obj = open(self._file_path, mode='rb')
         self._mmap_obj = mmap(self._file_obj.fileno(), 0, access=ACCESS_READ)
-        atexit.register(self._cleanup)
         self._reader = Reader(self._mmap_obj)
 
         self._keys = self._get_key_iterator()
@@ -102,6 +100,9 @@ class cdb:
                 f.close()
             except Exception:
                 pass
+
+    def __del__(self):
+        self._cleanup()
 
     def _unique_keys(self, keys):
         seen = set()

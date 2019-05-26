@@ -143,7 +143,7 @@ The `python-cdb` package accepts integer file descriptors as well as file paths
 in `init()` and `cdbmake()`. This module does not.
 
 The `cdb` objects (returned by the `init()` function) and the `cdbmake` objects
-close their open file objects at interpreter exit.
+close their open file objects when they are garbage collected.
 You may call the `._cleanup()` method on either one to close the objects
 yourself (this method is not avaialble when using the `python-cdb` package).
 
