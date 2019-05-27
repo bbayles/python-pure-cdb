@@ -106,10 +106,11 @@ class cdb:
     def __del__(self):
         self._cleanup()
 
-    def _unique_keys(self, keys):
+    def _unique_keys(self):
+        all_keys = (k for k, v in self._decoded_items())
         seen = set()
         seen_add = seen.add
-        for k in keys:
+        for k in all_keys:
             if k not in seen:
                 seen_add(k)
                 yield k
@@ -130,8 +131,7 @@ class cdb:
                 yield tuple(decoded_pair)
 
     def _get_key_iterator(self):
-        all_keys = (k for k, v in self._decoded_items())
-        unique_keys = self._unique_keys(all_keys)
+        unique_keys = self._unique_keys()
         return cycle(chain(unique_keys, repeat(None)))
 
     def each(self):
@@ -191,8 +191,7 @@ class cdb:
     def keys(self):
         """Return a list of the distinct keys stored in the database.
         """
-        all_keys = (k for k, v in self._decoded_items())
-        unique_keys = self._unique_keys(all_keys)
+        unique_keys = self._unique_keys()
         return list(unique_keys)
 
     @property

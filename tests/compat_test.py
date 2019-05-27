@@ -57,7 +57,6 @@ class CompatTests(object):
     def test_finish(self):
         self.db.finish()
         self.assertFalse(exists(self.tmp_path))
-        self.db.finish()
 
     def test_get(self):
         reader = self._get_reader()
@@ -127,6 +126,7 @@ class PythonCDBTests(CompatTests, unittest.TestCase):
 class PythonPureCDBTests(CompatTests, unittest.TestCase):
     def test_cdbmake_cleanup(self):
         # Cleanup after close - no exception
+        self.db.finish()
         self.db.finish()
         self.db._cleanup()
 
