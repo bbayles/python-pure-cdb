@@ -33,9 +33,9 @@ class CompatTests(object):
     def tearDown(self):
         rmtree(self.temp_dir, ignore_errors=False)
 
-    def _get_reader(self):
+    def _get_reader(self, **kwargs):
         self.db.finish()
-        return cdb.init(self.cdb_path.encode('utf-8'))
+        return cdb.init(self.cdb_path.encode('utf-8'), **kwargs)
 
     def test_add(self):
         self.db.add('a', '4')
@@ -43,14 +43,21 @@ class CompatTests(object):
         self.db.add('a', '4')
         self.assertEqual(self.db.numentries, 7)
 
+        with self.assertRaises(TypeError):
+            self.db.add(1, '1')
+
     def test_numentries(self):
         self.assertEqual(self.db.numentries, 5)
         self.db.finish()
         self.assertEqual(self.db.numentries, 5)
 
+    def test_cdbmake_fd(self):
+        self.assertTrue(isinstance(self.db.fd, int))
+
     def test_finish(self):
         self.db.finish()
         self.assertFalse(exists(self.tmp_path))
+        self.db.finish()
 
     def test_get(self):
         reader = self._get_reader()
@@ -100,10 +107,15 @@ class CompatTests(object):
         self.assertIsNone(reader.nextkey())
         self.assertIsNone(reader.nextkey())
 
-    def test_name_size(self):
+    def test_keys(self):
+        reader = self._get_reader()
+        self.assertEqual(reader.keys(), ['a', 'b', 'c'])
+
+    def test_name_size_fd(self):
         reader = self._get_reader()
         self.assertEqual(reader.name.decode('utf-8'), self.cdb_path)
         self.assertEqual(reader.size, 2178)
+        self.assertTrue(isinstance(reader.fd, int))
 
 
 @unittest.skipIf(not test_cdb, 'Tests for Python 2 module')
@@ -113,7 +125,38 @@ class PythonCDBTests(CompatTests, unittest.TestCase):
 
 @unittest.skipIf(test_cdb, 'Tests for Python 3 module')
 class PythonPureCDBTests(CompatTests, unittest.TestCase):
-    pass
+    def test_cdbmake_cleanup(self):
+        # Cleanup after close - no exception
+        self.db.finish()
+        self.db._cleanup()
+
+        # Exception during cleanup - we soldier on
+        self.db._temp_obj = None
+        self.db._cleanup()
+
+    def test_add_after_finish(self):
+        self.db.finish()
+        with self.assertRaises(cdb.error):
+            self.db.add('d', '1')
+
+    def test_cdb_cleanup(self):
+        # Cleanup after close - no exception
+        reader = self._get_reader()
+        reader._mmap_obj.close()
+        reader._file_obj.close()
+        reader._cleanup()
+
+        reader._mmap_obj = None
+        reader._file_obj = None
+
+        # Exception during cleanup - we soldier on
+        reader._cleanup()
+
+    def test_no_encoding(self):
+        reader = self._get_reader(encoding=None)
+        self.assertEqual(reader.get(b'a'), b'1')
+        self.assertEqual(reader.getall(b'a'), [b'1', b'2', b'\x80'])
+        self.assertEqual(reader.keys(), [b'a', b'b', b'c'])
 
 
 if __name__ == '__main__':

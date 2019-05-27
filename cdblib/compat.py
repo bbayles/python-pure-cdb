@@ -85,11 +85,13 @@ class cdbmake:
 class cdb:
     def __init__(self, f, encoding='utf-8'):
         self._file_path = f
+
         self.encoding = encoding
+        strict = not bool(encoding)
 
         self._file_obj = open(self._file_path, mode='rb')
         self._mmap_obj = mmap(self._file_obj.fileno(), 0, access=ACCESS_READ)
-        self._reader = Reader(self._mmap_obj)
+        self._reader = Reader(self._mmap_obj, strict=strict)
 
         self._keys = self._get_key_iterator()
         self._items = cycle(chain(self._decoded_items(), [None]))
@@ -180,7 +182,7 @@ class cdb:
         for value in self._reader.gets(k):
             try:
                 value = value.decode(self.encoding)
-            except (AttributeError, UnicodeDecodeError):
+            except (AttributeError, UnicodeDecodeError, TypeError):
                 value = value
             ret_append(value)
 
@@ -189,7 +191,9 @@ class cdb:
     def keys(self):
         """Return a list of the distinct keys stored in the database.
         """
-        return self._reader.keys()
+        all_keys = (k for k, v in self._decoded_items())
+        unique_keys = self._unique_keys(all_keys)
+        return list(unique_keys)
 
     @property
     def name(self):
