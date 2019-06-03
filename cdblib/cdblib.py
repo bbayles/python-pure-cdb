@@ -72,7 +72,7 @@ class Reader(_CDBBase):
     def __init__(self, data, **kwargs):
         '''Create an instance reading from a sequence and using hashfn to hash
         keys.'''
-        if len(data) < 2048:
+        if len(data) < (self.pair_size * 256):
             raise IOError('CDB too small')
 
         self.data = data

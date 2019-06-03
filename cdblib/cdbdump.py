@@ -6,14 +6,10 @@ import cdblib
 
 def cdbdump(parsed_args, **kwargs):
     # Read binary data from stdin by default
-    stdin = kwargs.get('stdin')
-    if stdin is None:
-        stdin = sys.stdin.buffer
+    stdin = kwargs.get('stdin', sys.stdin.buffer)
 
     # Print text data to stdout by default
-    stdout = kwargs.get('stdout')
-    if stdout is None:
-        stdout = sys.stdout.buffer
+    stdout = kwargs.get('stdout', sys.stdout.buffer)
 
     # Consume stdin and parse the cdb file
     reader_cls = cdblib.Reader64 if parsed_args['64'] else cdblib.Reader

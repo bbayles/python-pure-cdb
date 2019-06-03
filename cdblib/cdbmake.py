@@ -8,9 +8,7 @@ import cdblib
 class CDBMaker(object):
     def __init__(self, parsed_args, **kwargs):
         # Read binary data from stdin and write errors to stderr (by default)
-        self.stdin = kwargs.get('stdin')
-        if self.stdin is None:
-            self.stdin = sys.stdin.buffer
+        self.stdin = kwargs.get('stdin', sys.stdin.buffer)
 
         self.stderr = kwargs.get('stderr', sys.stderr)
 

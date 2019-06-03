@@ -166,6 +166,15 @@ class ReaderNativeInterfaceTestBase(object):
         sio.seek(0)
         self.reader = self.reader_cls(sio.getvalue(), hashfn=self.HASHFN)
 
+    def test_min_size(self):
+        with io.BytesIO() as f:
+            with self.writer_cls(f, hashfn=self.HASHFN) as writer:
+                pass
+            data = f.getvalue()
+
+        with self.assertRaises(OSError):
+            reader = self.reader_cls(data[:-1], hashfn=self.HASHFN)
+
     def test_insertion_order(self):
         keys  = [b'dave'] * 10
         keys.append(b'dave_no_dups')
