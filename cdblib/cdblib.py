@@ -12,10 +12,10 @@ from .djb_hash import djb_hash
 
 # Structs for 32-bit databases
 read_2_le4 = Struct('<LL').unpack
-read_2_le8 = Struct('<QQ').unpack
+write_2_le4 = Struct('<LL').pack
 
 # Structs for 64-bit databases
-write_2_le4 = Struct('<LL').pack
+read_2_le8 = Struct('<QQ').unpack
 write_2_le8 = Struct('<QQ').pack
 
 # Encoders for keys
