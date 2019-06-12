@@ -12,10 +12,10 @@ from .djb_hash import djb_hash
 
 # Structs for 32-bit databases
 read_2_le4 = Struct('<LL').unpack
-read_2_le8 = Struct('<QQ').unpack
+write_2_le4 = Struct('<LL').pack
 
 # Structs for 64-bit databases
-write_2_le4 = Struct('<LL').pack
+read_2_le8 = Struct('<QQ').unpack
 write_2_le8 = Struct('<QQ').pack
 
 # Encoders for keys
@@ -72,7 +72,7 @@ class Reader(_CDBBase):
     def __init__(self, data, **kwargs):
         '''Create an instance reading from a sequence and using hashfn to hash
         keys.'''
-        if len(data) < 2048:
+        if len(data) < (self.pair_size * 256):
             raise IOError('CDB too small')
 
         self.data = data
