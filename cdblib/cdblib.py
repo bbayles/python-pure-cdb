@@ -74,23 +74,26 @@ class _CDBBase(object):
 
 
 class Reader(_CDBBase):
-    '''A dictionary-like object for reading a Constant Database accessed
-    through a string or string-like sequence, such as mmap.mmap().'''
     unpack = struct_32.unpack
     read_size = struct_32.size
 
-    def __init__(self, data, **kwargs):
-        # If we've got a file-like object, use it
-        if all(hasattr(data, x) for x in ('close', 'read', 'seek', 'tell')):
-            self._file_obj
-        # If we've got a path, open the file it represents
-        elif is_file(data):
-            self._file_obj = open(data, 'rb')
-        # If we've just got bytes, read them like a file
+    def __init__(self, *args, **kwargs):
+        # If one argument is given, treat it like a string of bytes.
+        if len(args) == 1:
+            self._init_data(args[0])
+        # If keyword arguments are given, use them instead.
+        elif len(args) == 0:
+            if 'file_obj' in kwargs:
+                self._file_obj = kwargs['file_obj']
+            elif 'file_path' in kwargs:
+                self._file_obj = open(data, 'rb')
+            elif 'data' in kwargs:
+                self._init_data(kwargs['data'])
+            else:
+                raise TypeError('No source data given')
+        # Unknown input
         else:
-            if len(data) < (self.read_size * 256):
-                raise IOError('CDB too small')
-            self._file_obj = BytesIO(data)
+            raise TypeError('Wrong number of arguments')
 
         self._read_pair = (
             lambda: self.unpack(self._file_obj.read(self.read_size))
@@ -99,6 +102,12 @@ class Reader(_CDBBase):
         self.length = sum(p[1] for p in self.pointers) // 2
 
         super().__init__(**kwargs)
+
+    def _init_data(self, data):
+        if len(data) < (self.read_size * 256):
+            raise IOError('CDB too small')
+
+        self._file_obj = BytesIO(data)
 
     def __del__(self):
         self.close()
