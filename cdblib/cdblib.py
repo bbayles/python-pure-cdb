@@ -10,9 +10,6 @@ from os.path import isfile
 from struct import Struct
 from itertools import chain
 
-import six
-from six.moves import range
-
 from .djb_hash import djb_hash
 
 # Structs for 32-bit databases
@@ -26,9 +23,10 @@ read_2_le8 = struct_64.unpack
 write_2_le8 = struct_64.pack
 
 # Encoders for keys
-DEFAULT_ENCODERS = {six.text_type: lambda x: x.encode('utf-8')}
-for t in six.integer_types:
-    DEFAULT_ENCODERS[t] = lambda x: six.text_type(x).encode('utf-8')
+DEFAULT_ENCODERS = {
+    str: lambda x: x.encode('utf-8'),
+    int: lambda x: str(x).encode('utf-8'),
+}
 
 
 def is_file(data):
@@ -50,7 +48,7 @@ class _CDBBase(object):
             self.encoders.update(encoders)
 
     def hash_key(self, key):
-        if not isinstance(key, six.binary_type):
+        if not isinstance(key, bytes):
             try:
                 encoded_key = self.encoders[type(key)](key)
             except KeyError as e:
@@ -67,8 +65,8 @@ class _CDBBase(object):
         try:
             h = self.hashfn(key)
         except TypeError as e:
-            msg = 'key must be of type {}'
-            e.args = (msg.format(six.binary_type.__name__),)
+            msg = 'key must be of type bytes'
+            e.args = (msg,)
             raise
 
         # Truncate to 32 bits and remove sign.
@@ -90,6 +88,8 @@ class Reader(_CDBBase):
             self._file_obj = open(data, 'rb')
         # If we've just got bytes, read them like a file
         else:
+            if len(data) < (self.read_size * 256):
+                raise IOError('CDB too small')
             self._file_obj = BytesIO(data)
 
         self._read_pair = (
@@ -120,14 +120,6 @@ class Reader(_CDBBase):
 
     def __len__(self):
         return self.length
-
-    def _read_pointers(self):
-        ret = []
-        for __ in range(256):
-            table_pos, table_len = self._read_pair()
-            ret.append((table_pos, table_len))
-
-        return ret
 
     def close(self):
         try:
@@ -250,9 +242,8 @@ class Writer(_CDBBase):
     def put(self, key, value=b''):
         '''Write a string key/value pair to the output file.'''
         # Ensure that the value is binary
-        if not isinstance(value, six.binary_type):
-            msg = 'value must be of type {}'
-            raise TypeError(msg.format(six.binary_type.__name__))
+        if not isinstance(value, bytes):
+            raise TypeError('value must be of type bytes')
 
         # Computing the hash for the key also ensures that it's binary
         key, h = self.hash_key(key)
@@ -283,12 +274,12 @@ class Writer(_CDBBase):
     def putstring(self, key, value, encoding='utf-8'):
         '''Write a unicode string associated with the given key to the output
         file after encoding it as UTF-8 or the given encoding.'''
-        self.put(key, six.text_type.encode(value, encoding))
+        self.put(key, value.encode(encoding))
 
     def putstrings(self, key, values, encoding='utf-8'):
         '''Write zero or more unicode strings to the output file. Equivalent to
         calling putstring() in a loop.'''
-        self.puts(key, (six.text_type.encode(v, encoding) for v in values))
+        self.puts(key, (v.encode(encoding) for v in values))
 
     def finalize(self):
         '''Write the final hash tables to the output file, and write out its
