@@ -5,8 +5,8 @@ that efficiently handle many keys, while remaining space-efficient.
     http://cr.yp.to/cdb.html
 
 '''
-from __future__ import unicode_literals
-
+from io import BytesIO
+from os.path import isfile
 from struct import Struct
 from itertools import chain
 
@@ -16,17 +16,26 @@ from six.moves import range
 from .djb_hash import djb_hash
 
 # Structs for 32-bit databases
-read_2_le4 = Struct('<LL').unpack
-read_2_le8 = Struct('<QQ').unpack
+struct_32 = Struct('<LL')
+read_2_le4 = struct_32.unpack
+write_2_le4 = struct_32.pack
 
 # Structs for 64-bit databases
-write_2_le4 = Struct('<LL').pack
-write_2_le8 = Struct('<QQ').pack
+struct_64 = Struct('<QQ')
+read_2_le8 = struct_64.unpack
+write_2_le8 = struct_64.pack
 
 # Encoders for keys
 DEFAULT_ENCODERS = {six.text_type: lambda x: x.encode('utf-8')}
 for t in six.integer_types:
     DEFAULT_ENCODERS[t] = lambda x: six.text_type(x).encode('utf-8')
+
+
+def is_file(data):
+    try:
+        return isfile(data)
+    except ValueError:
+        return False
 
 
 class _CDBBase(object):
@@ -69,133 +78,142 @@ class _CDBBase(object):
 class Reader(_CDBBase):
     '''A dictionary-like object for reading a Constant Database accessed
     through a string or string-like sequence, such as mmap.mmap().'''
-
-    read_pair = staticmethod(read_2_le4)
-    pair_size = 8
+    unpack = struct_32.unpack
+    read_size = struct_32.size
 
     def __init__(self, data, **kwargs):
-        '''Create an instance reading from a sequence and using hashfn to hash
-        keys.'''
-        if len(data) < 2048:
-            raise IOError('CDB too small')
+        # If we've got a file-like object, use it
+        if all(hasattr(data, x) for x in ('close', 'read', 'seek', 'tell')):
+            self._file_obj
+        # If we've got a path, open the file it represents
+        elif is_file(data):
+            self._file_obj = open(data, 'rb')
+        # If we've just got bytes, read them like a file
+        else:
+            self._file_obj = BytesIO(data)
 
-        self.data = data
-        self.index = [self.read_pair(data[i:i+self.pair_size])
-                      for i in range(0, 256*self.pair_size, self.pair_size)]
-        self.table_start = min(p[0] for p in self.index)
-        # Assume load load factor is 0.5 like official CDB.
-        self.length = sum(p[1] >> 1 for p in self.index)
+        self._read_pair = (
+            lambda: self.unpack(self._file_obj.read(self.read_size))
+        )
+        self.pointers = [self._read_pair() for __ in range(256)]
+        self.length = sum(p[1] for p in self.pointers) // 2
 
-        super(Reader, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
-    def iteritems(self):
-        '''Like dict.iteritems(). Items are returned in insertion order.'''
-        pos = self.pair_size * 256
-        while pos < self.table_start:
-            klen, dlen = self.read_pair(self.data[pos:pos+self.pair_size])
-            pos += self.pair_size
+    def __del__(self):
+        self.close()
 
-            key = self.data[pos:pos+klen]
-            pos += klen
+    def __enter__(self):
+        return self
 
-            data = self.data[pos:pos+dlen]
-            pos += dlen
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
-            yield key, data
-
-    def items(self):
-        '''Like dict.items().'''
-        return list(self.iteritems())
-
-    def iterkeys(self):
-        '''Like dict.iterkeys().'''
-        return (p[0] for p in self.iteritems())
-    __iter__ = iterkeys
-
-    def itervalues(self):
-        '''Like dict.itervalues().'''
-        return (p[1] for p in self.iteritems())
-
-    def keys(self):
-        '''Like dict.keys().'''
-        return [p[0] for p in self.iteritems()]
-
-    def values(self):
-        '''Like dict.values().'''
-        return [p[1] for p in self.iteritems()]
+    def __iter__(self):
+        return self.iterkeys()
 
     def __getitem__(self, key):
-        '''Like dict.__getitem__().'''
         value = self.get(key)
         if value is None:
             raise KeyError(key)
         return value
 
-    def has_key(self, key):
-        '''Return True if key exists in the database.'''
-        return self.get(key) is not None
-    __contains__ = has_key
-
     def __len__(self):
-        '''Return the number of records in the database.'''
         return self.length
 
-    def gets(self, key):
-        '''Yield values for key in insertion order.'''
-        key, h = self.hash_key(key)
-        start, nslots = self.index[h & 0xff]
+    def _read_pointers(self):
+        ret = []
+        for __ in range(256):
+            table_pos, table_len = self._read_pair()
+            ret.append((table_pos, table_len))
 
-        if nslots:
-            end = start + (nslots * self.pair_size)
-            slot_off = start + (((h >> 8) % nslots) * self.pair_size)
+        return ret
 
-            for pos in chain(range(slot_off, end, self.pair_size),
-                             range(start, slot_off, self.pair_size)):
-                rec_h, rec_pos = self.read_pair(
-                    self.data[pos:pos+self.pair_size]
-                )
-
-                if not rec_h:
-                    break
-                elif rec_h == h:
-                    klen, dlen = self.read_pair(
-                        self.data[rec_pos:rec_pos+self.pair_size]
-                    )
-                    rec_pos += self.pair_size
-
-                    if self.data[rec_pos:rec_pos+klen] == key:
-                        rec_pos += klen
-                        yield self.data[rec_pos:rec_pos+dlen]
+    def close(self):
+        try:
+            self._file_obj.close()
+        except Exception:
+            pass
 
     def get(self, key, default=None):
-        '''Get the first value for key, returning default if missing.'''
-        # Avoid exception catch when handling default case; much faster.
-        return next(chain(self.gets(key), (default,)))
+        return next(self.gets(key), default)
 
     def getint(self, key, default=None, base=0):
-        '''Get the first value for key converted it to an int, returning
-        default if missing.'''
         value = self.get(key, default)
         if value is not default:
             return int(value, base)
         return value
 
     def getints(self, key, base=0):
-        '''Yield values for key in insertion order after converting to int.'''
         return (int(v, base) for v in self.gets(key))
 
     def getstring(self, key, default=None, encoding='utf-8'):
-        '''Get the first value for key decoded as unicode, returning default if
-        not found.'''
         value = self.get(key, default)
         if value is not default:
             return value.decode(encoding)
         return value
 
     def getstrings(self, key, encoding='utf-8'):
-        '''Yield values for key in insertion order after decoding as
-        unicode.'''
         return (v.decode(encoding) for v in self.gets(key))
+
+    def gets(self, key):
+        key, hashed_key = self.hash_key(key)
+        slot_number, table_number = divmod(hashed_key, 256)
+        table_pos, table_len = self.pointers[table_number]
+        if not table_len:
+            return
+        table_end = table_pos + (self.read_size * table_len)
+
+        slot_number %= table_len
+        slot_pos = table_pos + (self.read_size * slot_number)
+
+        self._file_obj.seek(slot_pos)
+        hash_value, byte_position = self._read_pair()
+        check_positions = []
+        while True:
+            if (hash_value == hashed_key) and byte_position:
+                check_positions.append(byte_position)
+            if self._file_obj.tell() == table_end:
+                self._file_obj.seek(table_pos)
+            hash_value, byte_position = self._read_pair()
+            if byte_position == 0:
+                break
+
+        for byte_position in check_positions:
+            self._file_obj.seek(byte_position)
+            key_size, value_size = self._read_pair()
+            candidate_key = self._file_obj.read(key_size)
+            candidate_value = self._file_obj.read(value_size)
+            if candidate_key == key:
+                yield candidate_value
+
+    def has_key(self, key):
+        return self.get(key) is not None
+
+    __contains__ = has_key
+
+    def iteritems(self):
+        self._file_obj.seek(256 * self.read_size)
+        for i in range(self.length):
+            key_size, value_size = self._read_pair()
+            key = self._file_obj.read(key_size)
+            value = self._file_obj.read(value_size)
+            yield key, value
+
+    def iterkeys(self):
+        return (k for k, v in self.iteritems())
+
+    def itervalues(self):
+        return (v for k, v in self.iteritems())
+
+    def items(self):
+        return list(self.iteritems())
+
+    def keys(self):
+        return list(self.iterkeys())
+
+    def values(self):
+        return list(self.itervalues())
 
 
 class Reader64(Reader):
@@ -203,8 +221,8 @@ class Reader64(Reader):
     64-bit file offsets. The CDB file must be generated with an appropriate
     writer.'''
 
-    read_pair = staticmethod(read_2_le8)
-    pair_size = 16
+    unpack = struct_64.unpack
+    read_size = struct_64.size
 
 
 class Writer(_CDBBase):
