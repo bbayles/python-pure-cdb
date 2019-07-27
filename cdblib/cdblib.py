@@ -86,7 +86,7 @@ class Reader(_CDBBase):
             if 'file_obj' in kwargs:
                 self._file_obj = kwargs['file_obj']
             elif 'file_path' in kwargs:
-                self._file_obj = open(data, 'rb')
+                self._file_obj = open(kwargs['file_path'], 'rb')
             elif 'data' in kwargs:
                 self._init_data(kwargs['data'])
             else:
