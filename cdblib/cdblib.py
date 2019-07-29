@@ -84,11 +84,11 @@ class Reader(_CDBBase):
         # If keyword arguments are given, use them instead.
         elif len(args) == 0:
             if 'file_obj' in kwargs:
-                self._file_obj = kwargs['file_obj']
+                self._file_obj = kwargs.pop('file_obj')
             elif 'file_path' in kwargs:
-                self._file_obj = open(kwargs['file_path'], 'rb')
+                self._file_obj = open(kwargs.pop('file_path'), 'rb')
             elif 'data' in kwargs:
-                self._init_data(kwargs['data'])
+                self._init_data(kwargs.pop('data'))
             else:
                 raise TypeError('No source data given')
         # Unknown input
