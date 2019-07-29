@@ -195,10 +195,13 @@ class Reader(_CDBBase):
 
     def iteritems(self):
         self._file_obj.seek(256 * self.read_size)
+        pos = self._file_obj.tell()
         for i in range(self.length):
+            self._file_obj.seek(pos)
             key_size, value_size = self._read_pair()
             key = self._file_obj.read(key_size)
             value = self._file_obj.read(value_size)
+            pos = self._file_obj.tell()
             yield key, value
 
     def iterkeys(self):
