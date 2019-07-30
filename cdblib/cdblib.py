@@ -6,7 +6,6 @@ that efficiently handle many keys, while remaining space-efficient.
 
 '''
 from io import BytesIO
-from os.path import isfile
 from struct import Struct
 from itertools import chain
 
@@ -14,12 +13,10 @@ from .djb_hash import djb_hash
 
 # Structs for 32-bit databases
 struct_32 = Struct('<LL')
-read_2_le4 = struct_32.unpack
 write_2_le4 = struct_32.pack
 
 # Structs for 64-bit databases
 struct_64 = Struct('<QQ')
-read_2_le8 = struct_64.unpack
 write_2_le8 = struct_64.pack
 
 # Encoders for keys
@@ -27,13 +24,6 @@ DEFAULT_ENCODERS = {
     str: lambda x: x.encode('utf-8'),
     int: lambda x: str(x).encode('utf-8'),
 }
-
-
-def is_file(data):
-    try:
-        return isfile(data)
-    except ValueError:
-        return False
 
 
 class _CDBBase(object):
@@ -74,7 +64,7 @@ class _CDBBase(object):
 
 
 class Reader(_CDBBase):
-    unpack = struct_32.unpack
+    unpack = staticmethod(struct_32.unpack)
     read_size = struct_32.size
 
     def __init__(self, *args, **kwargs):
