@@ -67,23 +67,17 @@ class Reader(_CDBBase):
     unpack = staticmethod(struct_32.unpack)
     read_size = struct_32.size
 
-    def __init__(self, *args, **kwargs):
-        # If one argument is given, treat it like a string of bytes.
-        if len(args) == 1:
-            self._init_data(args[0])
-        # If keyword arguments are given, use them instead.
-        elif len(args) == 0:
-            if 'file_obj' in kwargs:
-                self._file_obj = kwargs.pop('file_obj')
-            elif 'file_path' in kwargs:
-                self._file_obj = open(kwargs.pop('file_path'), 'rb')
-            elif 'data' in kwargs:
-                self._init_data(kwargs.pop('data'))
-            else:
-                raise TypeError('No source data given')
-        # Unknown input
+    def __init__(self, data=None, file_path=None, file_obj=None, **kwargs):
+        if data is not None:
+            if len(data) < (self.read_size * 256):
+                raise IOError('CDB too small')
+            self._file_obj = BytesIO(data)
+        elif file_path is not None:
+            self._file_obj = open(file_path, 'rb')
+        elif file_obj is not None:
+            self._file_obj = file_obj
         else:
-            raise TypeError('Wrong number of arguments')
+            raise TypeError('No source data given')
 
         self._read_pair = (
             lambda: self.unpack(self._file_obj.read(self.read_size))
@@ -93,11 +87,17 @@ class Reader(_CDBBase):
 
         super().__init__(**kwargs)
 
-    def _init_data(self, data):
-        if len(data) < (self.read_size * 256):
-            raise IOError('CDB too small')
+    @classmethod
+    def from_bytes(cls, data, **kwargs):
+        return cls(data=data, **kwargs)
 
-        self._file_obj = BytesIO(data)
+    @classmethod
+    def from_file_path(cls, file_path, **kwargs):
+        return cls(file_path=file_path, **kwargs)
+
+    @classmethod
+    def from_file_obj(cls, file_obj, **kwargs):
+        return cls(file_obj=file_obj, **kwargs)
 
     def __del__(self):
         self.close()

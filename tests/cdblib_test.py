@@ -290,17 +290,17 @@ class Reader64NativeInterfaceAltHashTestCase(ReaderNativeInterfaceTestBase,
 
 
 class ReaderInputTestBase(object):
-    def _get_data_reader(self):
+    def _get_bytes_reader(self):
         with open(self.file_path, 'rb') as infile:
             data = infile.read()
 
-        return self.reader_cls(data)
+        return self.reader_cls.from_bytes(data)
 
     def _get_file_obj_reader(self):
-        return self.reader_cls(file_obj=open(self.file_path, 'rb'))
+        return self.reader_cls.from_file_obj(open(self.file_path, 'rb'))
 
     def _get_file_path_reader(self):
-        return self.reader_cls(file_path=self.file_path)
+        return self.reader_cls.from_file_path(self.file_path)
 
     def test_iterate(self):
         by_items = defaultdict(set)
@@ -320,13 +320,13 @@ class ReaderInputTestBase(object):
 
 class ReaderInputDataTests(ReaderInputTestBase, unittest.TestCase):
     reader_cls = cdblib.Reader
-    init_method = '_get_data_reader'
+    init_method = '_get_bytes_reader'
     file_path = testdata_path('pwdump.cdb')
 
 
 class Reader64InputDataTests(ReaderInputTestBase, unittest.TestCase):
     reader_cls = cdblib.Reader64
-    init_method = '_get_data_reader'
+    init_method = '_get_bytes_reader'
     file_path = testdata_path('pwdump.cdb64')
 
 
