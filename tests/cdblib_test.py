@@ -317,6 +317,9 @@ class ReaderInputTestBase(object):
 
         self.assertEqual(by_items, by_keys)
 
+    def test_no_input(self):
+        with self.assertRaises(TypeError):
+            self.reader_cls(None)
 
 class ReaderInputDataTests(ReaderInputTestBase, unittest.TestCase):
     reader_cls = cdblib.Reader
