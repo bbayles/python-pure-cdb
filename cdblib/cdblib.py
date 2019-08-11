@@ -148,28 +148,50 @@ class Reader(_CDBBase):
         return (v.decode(encoding) for v in self.gets(key))
 
     def gets(self, key):
+        # Algorithm from the spec: https://cr.yp.to/cdb/cdb.txt
+
+        # "Compute the hash value of the key in the record."
         key, hashed_key = self.hash_key(key)
+
+        # "The hash value modulo 256 is the number of a hash table."
         slot_number, table_number = divmod(hashed_key, 256)
         table_pos, table_len = self.pointers[table_number]
+
+        # If the length of that table is 0, then there's no matching record.
         if not table_len:
             return
+
+        # Otherwise, compute the position of the end of the table - we'll
+        # need it to be able to search the whole table.
         table_end = table_pos + (self.read_size * table_len)
 
+        # "The hash value divided by 256, modulo the length of that table, is a
+        # slot number."
         slot_number %= table_len
-        slot_pos = table_pos + (self.read_size * slot_number)
 
-        self._file_obj.seek(slot_pos)
-        hash_value, byte_position = self._read_pair()
+        # "Probe that slot, the next higher slot, and so on, until you find the
+        # record or run into an empty slot."
         check_positions = []
+        slot_pos = table_pos + (self.read_size * slot_number)
+        self._file_obj.seek(slot_pos)
         while True:
-            if (hash_value == hashed_key) and byte_position:
-                check_positions.append(byte_position)
-            if self._file_obj.tell() == table_end:
-                self._file_obj.seek(table_pos)
             hash_value, byte_position = self._read_pair()
-            if byte_position == 0:
+
+            # We ran into an empty slot: the search is finished.
+            if not byte_position:
                 break
 
+            # Potential hit - we might have found a matching record.
+            if hash_value == hashed_key:
+                check_positions.append(byte_position)
+
+            # If we've not run into an empty slot yet, we're not finished.
+            # To go to the "next higher slot," we jump to the table's start.
+            if self._file_obj.tell() == table_end:
+                self._file_obj.seek(table_pos)
+
+        # For each of our potential hits, we jump into the records section
+        # and check the actual stored keys.
         for byte_position in check_positions:
             self._file_obj.seek(byte_position)
             key_size, value_size = self._read_pair()
