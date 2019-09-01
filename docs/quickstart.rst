@@ -38,6 +38,12 @@ To retrieve the first value stored at a key, use the `.get()` method.
 Note that all keys and values are `bytes` objects.
 For more information, see the library documentation.
 
+You may also construct a `Reader` instance with a file path.
+Use a `with` block to automatically close the file:
+
+    >>> with cdblib.Reader.from_file_path('info.cdb', 'rb') as reader:
+    ...    pass  # Do your thing here
+
 For "64-bit" database files, use `cdblib.Reader64` instead of `cdblib.Reader`.
 
 Writing new cdb files
