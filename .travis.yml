@@ -9,14 +9,16 @@ python:
     - "3.8-dev"
     - "pypy3.5-6.0"
 
+env:
+    - ENABLE_DJB_HASH_CEXT=0
+    - ENABLE_DJB_HASH_CEXT=1
+
 install:
     - "pip install ."
     - "pip install -U coveralls flake8"
 
 script:
     - "coverage run --include='cdblib/*.py' setup.py test"
-    - "coverage run --include='cdblib/*.py' setup.py test"
-    - "ENABLE_DJB_HASH_CEXT=1 coverage run --include='cdblib/*.py' setup.py test"
     - "flake8 ."
 
 notifications:
