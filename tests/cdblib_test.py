@@ -3,6 +3,7 @@ import hashlib
 import io
 import unittest
 
+from collections import defaultdict
 from functools import partial
 from os.path import abspath, dirname, join
 from struct import pack
@@ -286,6 +287,74 @@ class Reader64NativeInterfaceAltHashTestCase(ReaderNativeInterfaceTestBase,
     writer_cls = cdblib.Writer64
     # Use the adler32 checksum as a "hash"
     HASHFN = staticmethod(lambda s: adler32(s) & 0xffffffff)
+
+
+class ReaderInputTestBase(object):
+    def _get_bytes_reader(self):
+        with open(self.file_path, 'rb') as infile:
+            data = infile.read()
+
+        return self.reader_cls.from_bytes(data)
+
+    def _get_file_obj_reader(self):
+        return self.reader_cls.from_file_obj(open(self.file_path, 'rb'))
+
+    def _get_file_path_reader(self):
+        return self.reader_cls.from_file_path(self.file_path)
+
+    def test_iterate(self):
+        by_items = defaultdict(set)
+        init_method = getattr(self, self.init_method)
+        with init_method() as reader:
+            for key, value in reader.iteritems():
+                by_items[key].add(value)
+
+        by_keys = defaultdict(set)
+        with init_method() as reader:
+            for key in reader.iterkeys():
+                for value in reader.gets(key):
+                    by_keys[key].add(value)
+
+        self.assertEqual(by_items, by_keys)
+
+    def test_no_input(self):
+        with self.assertRaises(TypeError):
+            self.reader_cls(None)
+
+class ReaderInputDataTests(ReaderInputTestBase, unittest.TestCase):
+    reader_cls = cdblib.Reader
+    init_method = '_get_bytes_reader'
+    file_path = testdata_path('pwdump.cdb')
+
+
+class Reader64InputDataTests(ReaderInputTestBase, unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    init_method = '_get_bytes_reader'
+    file_path = testdata_path('pwdump.cdb64')
+
+
+class ReaderInputFileObjTests(ReaderInputTestBase, unittest.TestCase):
+    reader_cls = cdblib.Reader
+    init_method = '_get_file_obj_reader'
+    file_path = testdata_path('pwdump.cdb')
+
+
+class Reader64InputFileObjTests(ReaderInputTestBase, unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    init_method = '_get_file_obj_reader'
+    file_path = testdata_path('pwdump.cdb64')
+
+
+class ReaderInputFilePathTests(ReaderInputTestBase, unittest.TestCase):
+    reader_cls = cdblib.Reader
+    init_method = '_get_file_path_reader'
+    file_path = testdata_path('pwdump.cdb')
+
+
+class Reader64InputFilePathTests(ReaderInputTestBase, unittest.TestCase):
+    reader_cls = cdblib.Reader64
+    init_method = '_get_file_path_reader'
+    file_path = testdata_path('pwdump.cdb64')
 
 
 class WriterNativeInterfaceTestBase(object):

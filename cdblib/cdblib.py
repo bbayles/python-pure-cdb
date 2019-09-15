@@ -7,6 +7,7 @@ that efficiently handle many keys, while remaining space-efficient.
 '''
 from struct import Struct
 from itertools import chain
+from mmap import ACCESS_READ, mmap
 
 from .djb_hash import djb_hash
 
@@ -69,20 +70,63 @@ class Reader(_CDBBase):
     read_pair = staticmethod(read_2_le4)
     pair_size = 8
 
-    def __init__(self, data, **kwargs):
+    def __init__(self, data=None, file_path=None, file_obj=None, **kwargs):
         '''Create an instance reading from a sequence and using hashfn to hash
         keys.'''
-        if len(data) < (self.pair_size * 256):
-            raise IOError('CDB too small')
+        if data is not None:
+            if len(data) < (self.pair_size * 256):
+                raise IOError('CDB too small')
+            self.data = data
+            self.file_obj = None
+            self.mmap_obj = None
+        elif file_path is not None:
+            self.file_obj = open(file_path, 'rb')
+            self.data = mmap(self.file_obj.fileno(), 0, access=ACCESS_READ)
+        elif file_obj is not None:
+            self.file_obj = file_obj
+            self.data = mmap(self.file_obj.fileno(), 0, access=ACCESS_READ)
+        else:
+            raise TypeError('No source data given')
 
-        self.data = data
-        self.index = [self.read_pair(data[i:i+self.pair_size])
+        self.index = [self.read_pair(self.data[i:i+self.pair_size])
                       for i in range(0, 256*self.pair_size, self.pair_size)]
         self.table_start = min(p[0] for p in self.index)
         # Assume load load factor is 0.5 like official CDB.
         self.length = sum(p[1] >> 1 for p in self.index)
 
         super(Reader, self).__init__(**kwargs)
+
+    @classmethod
+    def from_bytes(cls, data, **kwargs):
+        return cls(data=data, **kwargs)
+
+    @classmethod
+    def from_file_path(cls, file_path, **kwargs):
+        return cls(file_path=file_path, **kwargs)
+
+    @classmethod
+    def from_file_obj(cls, file_obj, **kwargs):
+        return cls(file_obj=file_obj, **kwargs)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def __del__(self):
+        self.close()
+
+    def close(self):
+        try:
+            self.file_obj.close()
+        except Exception:
+            pass
+
+        try:
+            self.data.close()
+        except Exception:
+            pass
 
     def iteritems(self):
         '''Like dict.iteritems(). Items are returned in insertion order.'''

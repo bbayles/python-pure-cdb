@@ -8,16 +8,29 @@ The `Reader` classes
 `cdbmake` CLI tool. `cdblib.Reader64` reads "64-bit" cdb files, which can be
 produced by this package.
 
-The `Reader` classes take one positional argument, a `bytes`-like object with
-a database's content:
+The `Reader` classes can be instantiated by passing one positional argument,
+a `bytes`-like object with a database's content:
 
     >>> import cdblib
     >>> with open('info.cdb', 'rb') as f:
     ...     data = f.read()
     >>> reader = cdblib.Reader(data)
 
-An `mmap` object can be used to avoid reading an entire database into memory -
-see below.
+Alternatively, you can use the ``Reader`` classes as a context manager and
+give either a file path or a file-like object.
+
+    >>> with cdblib.Reader.from_file_path('info.cdb') as reader:
+    ...    print(reader.items())
+
+    >>> with open('info.cdb', 'rb') as f:
+    ...     with cdblib.Reader.from_file_obj(f) as reader:
+    ...         print(reader.items())
+
+When using the `.from_file_path()` or `.from_file_obj()` constructors, a
+memory-mapped file object is created. This keeps the whole database from
+being read into memory. See the
+`Python docs <https://docs.python.org/3/library/mmap.html>`_ for more
+information on `mmap`.
 
 Retrieving data
 ^^^^^^^^^^^^^^^
@@ -141,24 +154,6 @@ deal with `bytes` keys only.
     >>> reader.get(1)
     ...
     TypeError: key must be of type 'bytes'
-
-
-Limiting memory usage
-^^^^^^^^^^^^^^^^^^^^^
-
-To avoid having to read a whole database into memory, use `cdblib.Reader`
-(or `cdblib.Reader64`) with `mmap.mmap`.
-
-    >>> from mmap import mmap, ACCESS_READ
-    ... from cdblib import Reader
-    ...
-    ... with open('info.cdb', 'rb') as f:
-    ...     with mmap(f.fileno(), 0, access=ACCESS_READ) as m:
-    ...         reader = Reader(m)
-    ...         reader.items()
-
-See the `Python docs <https://docs.python.org/3/library/mmap.html>`_ for more
-information on `mmap`.
 
 The `Writer` classes
 --------------------
