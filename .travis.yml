@@ -15,6 +15,7 @@ install:
 
 script:
     - "coverage run --include='cdblib/*.py' setup.py test"
+    - "coverage run --include='cdblib/*.py' setup.py test"
     - "ENABLE_DJB_HASH_CEXT=1 coverage run --include='cdblib/*.py' setup.py test"
     - "flake8 ."
 
