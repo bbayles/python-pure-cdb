@@ -1,7 +1,9 @@
 Version history
 ===============
 
-* `Version 3.0.0 <https://github.com/dw/python-pure-cdb/releases/tag/v2.3.0>`_
+* `Version 3.1.0 <https://github.com/dw/python-pure-cdb/releases/tag/v3.1.0>`_
+    * `Reader` instances now act as context managers, and can be called with file paths or file-like objects.
+* `Version 3.0.0 <https://github.com/dw/python-pure-cdb/releases/tag/v3.0.0>`_
     * This package now supports Python 3 only. For a version that works with Python 2, see `this older release <https://github.com/dw/python-pure-cdb/releases/tag/v2.2.0>`
     * Added the `python-cdb` compatibility module
 * `Version 2.2.0 <https://github.com/dw/python-pure-cdb/releases/tag/v2.2.0>`_
