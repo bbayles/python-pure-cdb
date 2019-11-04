@@ -18,6 +18,7 @@ install:
 script:
     - "coverage run --include='cdblib/*.py' setup.py test"
     - "flake8 ."
+    - "coverage erase"
 
 notifications:
     - email: false
