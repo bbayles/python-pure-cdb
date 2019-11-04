@@ -5,7 +5,7 @@ from setuptools import Extension, find_packages, setup
 
 # Opt-in to building the C extension by setting the
 # ENABLE_DJB_HASH_CEXT environment variable
-if environ.get('ENABLE_DJB_HASH_CEXT'):
+if environ.get('ENABLE_DJB_HASH_CEXT', '1') != '0':
     ext_modules = [
         Extension('cdblib._djb_hash', sources=['cdblib/_djb_hash.c']),
     ]
