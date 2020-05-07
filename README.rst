@@ -1,8 +1,8 @@
 python-pure-cdb
 ===============
 
-.. image:: https://travis-ci.com/bbayles/python-pure-cdb.svg?branch=master
-    :target: https://travis-ci.com/bbayles/python-pure-cdb
+.. image:: https://travis-ci.org/bbayles/python-pure-cdb.svg?branch=master
+    :target: https://travis-ci.org/bbayles/python-pure-cdb
 
 .. image:: https://readthedocs.org/projects/python-pure-cdb/badge/?version=latest
     :target: https://python-pure-cdb.readthedocs.io/en/latest/?badge=latest
