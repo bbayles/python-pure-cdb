@@ -42,7 +42,7 @@ class _CDBBase(object):
             try:
                 encoded_key = self.encoders[type(key)](key)
             except KeyError as e:
-                e.args = 'could not encode {} to bytes'.format(key)
+                e.args = ('could not encode {} to bytes'.format(key),)
                 raise
         else:
             encoded_key = key
