@@ -742,6 +742,27 @@ class StrictnessTests64(StrictnessTestsBase, unittest.TestCase):
     reader_cls = cdblib.Reader64
     writer_cls = cdblib.Writer64
 
+class TestCDBBase(unittest.TestCase):
+
+    def test_cdbase(self):
+        cdbbase = cdblib.cdblib._CDBBase()
+        self.assertTrue(cdbbase.hashfn == cdblib.djb_hash)
+        self.assertTrue(cdbbase.hash_key != cdbbase.hash_key_strict)
+        self.assertTrue(cdbbase.encoders == cdblib.cdblib.DEFAULT_ENCODERS)
+
+        self.assertTrue(cdbbase.hash_key(u"test") == (b'test', 2087956275))
+        self.assertTrue(cdbbase.hash_key(b"test") == (b'test', 2087956275))
+        self.assertTrue(cdbbase.hash_key("test") == (b'test', 2087956275))
+        self.assertTrue(cdbbase.hash_key(1) == (b'1', 177556))
+
+        with self.assertRaises(KeyError) as error:
+            cdbbase.hash_key(3.4)
+        self.assertTrue(error.exception.args == ('could not encode 3.4 to bytes',))
+
+        with self.assertRaises(KeyError) as error:
+            cdbbase.hash_key(None)
+        self.assertTrue(error.exception.args == ('could not encode None to bytes',))
+
 
 if __name__ == '__main__':
     unittest.main()
