@@ -24,7 +24,7 @@ setup(
     keywords='cdb file format appengine database db',
     license='MIT',
     name='pure-cdb',
-    version='3.1.0',
+    version='3.1.1',
     packages=find_packages(include=['cdblib']),
     ext_modules=ext_modules,
     install_requires=[],
