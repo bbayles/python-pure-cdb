@@ -13,7 +13,7 @@ except ImportError:
     import cdblib.compat as cdb
     test_cdb = False
 
-from tests.cdblib_test import testdata_path
+from tests.test_cdblib import testdata_path
 
 
 class CompatTests(object):

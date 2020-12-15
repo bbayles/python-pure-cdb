@@ -12,7 +12,7 @@ import cdblib
 from cdblib.cdbmake import main as python_pure_cdbmake
 from cdblib.cdbdump import main as python_pure_cdbdump
 
-from .cdblib_test import testdata_path
+from .test_cdblib import testdata_path
 
 TYPES_DATA = (
     b'+6,1:binary->\x81\n'

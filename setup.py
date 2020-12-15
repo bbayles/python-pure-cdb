@@ -20,6 +20,7 @@ setup(
     author_email='dw@botanicus.net',
     description=description,
     long_description=description,
+    long_description_content_type='text/x-rst',
     download_url='https://github.com/dw/python-pure-cdb',
     keywords='cdb file format appengine database db',
     license='MIT',
