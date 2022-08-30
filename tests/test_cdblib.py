@@ -480,6 +480,17 @@ class WriterNativeInterfaceTestBase(object):
         ]:
             with self.assertRaises(exc_type):
                 self.writer.putstrings(key, value)
+    
+    def test_zero_hash(self):
+        # Adapted from https://github.com/bbayles/python-pure-cdb/issues/39
+        key1 = b'xyz'
+        key2 = bytes([*[13, 168, 240, 240, 64, 64, 128, 128, 128, 0, 128, 128, 0, 0, 0, 128, 128], *([0] * 692791), 128])  # noqa
+        value = b'abc'
+        self.writer.put(key1, value)
+        self.writer.put(key2, value)
+        reader = self.get_reader()
+        self.assertEqual(reader.get(key1), value)
+        self.assertEqual(reader.get(key2), value)
 
 
 class WriterNativeInterfaceDjbHashTestCase(WriterNativeInterfaceTestBase,
