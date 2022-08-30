@@ -182,30 +182,58 @@ class Reader(_CDBBase):
 
     def gets(self, key):
         '''Yield values for key in insertion order.'''
-        key, h = self.hash_key(key)
-        start, nslots = self.index[h & 0xff]
+        # Algorithm from the spec: https://cr.yp.to/cdb/cdb.txt
+        # "Compute the hash value of the key in the record."
+        key, hashed_key = self.hash_key(key)
 
-        if nslots:
-            end = start + (nslots * self.pair_size)
-            slot_off = start + (((h >> 8) % nslots) * self.pair_size)
+        # "The hash value modulo 256 is the number of a hash table."
+        slot_number, table_number = divmod(hashed_key, 256)
+        table_pos, table_len = self.index[table_number]
 
-            for pos in chain(range(slot_off, end, self.pair_size),
-                             range(start, slot_off, self.pair_size)):
-                rec_h, rec_pos = self.read_pair(
-                    self.data[pos:pos+self.pair_size]
+        # If the length of that table is 0, then there's no matching record.
+        if not table_len:
+            return
+
+        # Otherwise, compute the position of the end of the table - we'll
+        # need it to be able to search the whole table.
+        table_end = table_pos + (self.pair_size * table_len)
+
+        # "The hash value divided by 256, modulo the length of that table, is a
+        # slot number."
+        slot_number %= table_len
+
+        # "Probe that slot, the next higher slot, and so on, until you find the
+        # record or run into an empty slot."
+        slot_pos = table_pos + (self.pair_size * slot_number)
+        while True:
+            hash_value, byte_pos = self.read_pair(
+                self.data[slot_pos:slot_pos + self.pair_size]
+            )
+            slot_pos += self.pair_size
+
+            # We ran into an empty slot: the search is finished.
+            if not byte_pos:
+                break
+
+            # Potential hit - we might have found a matching record.
+            if hash_value == hashed_key:
+                key_size, value_size = self.read_pair(
+                    self.data[byte_pos:byte_pos + self.pair_size]
                 )
+                byte_pos += self.pair_size
 
-                if not rec_h:
-                    break
-                elif rec_h == h:
-                    klen, dlen = self.read_pair(
-                        self.data[rec_pos:rec_pos+self.pair_size]
-                    )
-                    rec_pos += self.pair_size
+                candidate_key = self.data[byte_pos:byte_pos+key_size]
+                byte_pos += key_size
 
-                    if self.data[rec_pos:rec_pos+klen] == key:
-                        rec_pos += klen
-                        yield self.data[rec_pos:rec_pos+dlen]
+                candidate_value = self.data[byte_pos:byte_pos+value_size]
+                byte_pos += value_size
+                if candidate_key == key:
+                    yield candidate_value
+
+            # If we've not run into an empty slot yet, we're not finished.
+            # To go to the "next higher slot," we jump to the table's start.
+            if slot_pos == table_end:
+                slot_pos = table_pos
 
     def get(self, key, default=None):
         '''Get the first value for key, returning default if missing.'''
