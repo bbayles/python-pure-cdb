@@ -56,7 +56,7 @@ Then write to the database with the `.put()` method.
 
    >>> import cdblib
    >>> with open('/tmp/new.cdb', 'wb') as f:
-   ...    with cdblib.Writer(f) as f:
+   ...    with cdblib.Writer(f) as writer:
    ...        writer.put(b'key', b'value')
 
 As with the reader class, all keys and values are `bytes` objects.
