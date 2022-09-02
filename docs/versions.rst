@@ -1,6 +1,9 @@
 Version history
 ===============
 
+* `Version 4.0.0 <https://github.com/dw/python-pure-cdb/releases/tag/v4.0.0>`_
+    * This package is now marked as supporting Python 3.6 and above
+    * Fixed a bug related to items that hash to the value 0 (thanks to pwlodarczyk92)
 * `Version 3.1.1 <https://github.com/dw/python-pure-cdb/releases/tag/v3.1.1>`_
     * Fixed a bug with handling hashing errors (thanks to maikroeder)
 * `Version 3.1.0 <https://github.com/dw/python-pure-cdb/releases/tag/v3.1.0>`_
