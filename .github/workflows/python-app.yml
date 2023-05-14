@@ -43,7 +43,7 @@ jobs:
         twine check dist/*
     - name: Upload packages
       if: "matrix.python-version == '3.8'"
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: python-pure-cdb-packages
         path: dist/*
