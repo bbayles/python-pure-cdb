@@ -1,8 +1,8 @@
 python-pure-cdb
 ===============
 
-.. image:: https://readthedocs.org/projects/python-pure-cdb/badge/?version=latest
-    :target: https://python-pure-cdb.readthedocs.io/en/latest/?badge=latest
+.. image:: https://github.com/bbayles/python-pure-cdb/actions/workflows/python-app.yml/badge.svg
+    :target: https://github.com/bbayles/python-pure-cdb/actions/workflows/python-app.yml
 
 The `python-pure-cdb` package (`pure-cdb <https://pypi.org/project/pure-cdb/>`_ on PyPI)
 is a Python library for working with D.J. Bernstein's "constant databases."
