@@ -8,9 +8,9 @@ python-pure-cdb
 
 **Compatible with D.J. Bernstein's cdb**
 
-A constant database is a of key-value database, a mapping - that can
-not be changed at runtime. That restriction allows to use a perfect
-hash that makes retrieval much faster than a regular key-value store.
+A constant database is a key-value database, a mapping, that can not
+be changed at runtime. That restriction allows to use a perfect hash
+that makes retrieval much faster than a regular, mutable, key-value store.
 
 `pure-cdb` will read the files that are produced by the original tool
 written by D.J. Bernstein. It also support a 64-bit setting to avoid
