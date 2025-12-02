@@ -17,7 +17,7 @@ To aid in porting `cdb` applications to Python 3, this library provides a
 compatability module for the `python-cdb <https://github.com/acg/python-cdb>`_
 package, which can act as a drop-in replacement (see `the docs <https://python-pure-cdb.readthedocs.io>`_).
 
-For more information on constant databases, see `djb's page <https://cr.yp.to/cdb.html>`_
+For more information on constant databases, see `djb's page <https://cdb.cr.yp.to/>`_
 and `Wikipedia <https://en.wikipedia.org/wiki/Cdb_(software)>`_.
 
 The documentation for this package is available at
