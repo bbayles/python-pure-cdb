@@ -38,7 +38,7 @@ jobs:
     - name: Build packages
       if: "matrix.python-version == '3.11'"
       run: |
-        pip install -U twine wheel
+        pip install -U twine wheel build
         python -m build
         twine check dist/*
     - name: Upload packages
