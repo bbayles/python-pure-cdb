@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pure-cdb"
+version = "5.0.0"
+description = "Pure Python reader/writer for Dan J. Bernstein's CDB format."
+readme = "README.rst"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    { name = "Bo Bayles", email = "bo@bbayles.com" },
+    { name = "David Wilson", email = "dw@botanicus.net" },
+]
+keywords = ["cdb", "file", "format", "appengine", "database", "db"]
+dependencies = []
+
+[project.urls]
+Download = "https://github.com/bbayles/python-pure-cdb"
+
+[project.scripts]
+python-pure-cdbmake = "cdblib.cdbmake:main"
+python-pure-cdbdump = "cdblib.cdbdump:main"
+
+[project.optional-dependencies]
+test = ["flake8"]
+
+[tool.setuptools.packages.find]
+include = ["cdblib"]
+
+[[tool.setuptools.ext-modules]]
+name = "cdblib._djb_hash"
+sources = ["cdblib/_djb_hash.c"]
+
+[tool.cibuildwheel]
+build-frontend = "build"
+skip = ["*-win32", "*-manylinux_i686", "*-musllinux_i686", "pp*"]
