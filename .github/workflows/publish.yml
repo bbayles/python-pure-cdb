@@ -36,17 +36,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.4.1
         env:
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_ARCHS_WINDOWS: "AMD64"
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: dist-wheels-${{ matrix.os }}
-          path: ./wheelhouse/*.whl
 
   publish:
     name: Publish to PyPI

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pure-cdb"
-version = "5.0.0"
+version = "5.0.1"
 description = "Pure Python reader/writer for Dan J. Bernstein's CDB format."
 readme = "README.rst"
 requires-python = ">=3.11"
